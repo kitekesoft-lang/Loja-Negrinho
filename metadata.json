@@ -1,0 +1,8 @@
+{
+  "name": "Loja Negrinho",
+  "description": "Sistema de ponto de venda (POS) e gestão comercial para mini mercado em conformidade com as regras da AGT e SAF-T(AO).",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
