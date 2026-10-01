@@ -4,6 +4,7 @@ import { Customer, Supplier } from '../types/customer';
 import { FiscalDocument } from '../types/document';
 import { StockItem, StockMovement } from '../types/erp';
 import { Payment } from '../types/payment';
+import { LicenseInfo } from '../types/license';
 
 export interface SyncQueueItem {
   id: string;
@@ -33,10 +34,39 @@ const STORAGE_KEYS = {
   SYNC_QUEUE: 'minha_loja_sync_queue_v1',
   CLOUD_CONFIG: 'minha_loja_cloud_config_v1',
   BACKUP_TIMESTAMP: 'minha_loja_last_backup_v1',
+  LICENSE: 'minha_loja_license_v1',
 };
 
 export class LocalPersistenceEngine {
   private static isSaving = false;
+
+  /**
+   * Obtém a licença gravada no armazenamento local
+   */
+  public static getLicense(): LicenseInfo | null {
+    if (typeof window === 'undefined' || !window.localStorage) return null;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.LICENSE);
+      if (raw) {
+        return JSON.parse(raw);
+      }
+    } catch {
+      // Ignorar falhas de leitura
+    }
+    return null;
+  }
+
+  /**
+   * Grava a licença no armazenamento local
+   */
+  public static saveLicense(license: LicenseInfo): void {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+      localStorage.setItem(STORAGE_KEYS.LICENSE, JSON.stringify(license));
+    } catch (err) {
+      console.error('Erro ao guardar licença no armazenamento local:', err);
+    }
+  }
 
   /**
    * Obtém a configuração de sincronização em nuvem

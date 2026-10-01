@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { FiscalDatabase } from '../../core/fiscal/repository/FiscalDatabase';
-import { User } from '../../core/fiscal/types/user';
+import { User, canAccessAdminLayout } from '../../core/fiscal/types/user';
 import { LocalPersistenceEngine } from '../../core/fiscal/storage/LocalPersistenceEngine';
+import { LicenseManagerView } from '../admin/LicenseManagerView';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import {
@@ -30,6 +31,7 @@ import {
   Wifi,
   WifiOff,
   QrCode,
+  KeyRound,
 } from 'lucide-react';
 import { AndroidInstallGuideModal } from '../common/AndroidInstallGuideModal';
 
@@ -42,9 +44,9 @@ export const OperatorSettingsView: React.FC<OperatorSettingsViewProps> = ({ curr
   const company = Array.from(db.companies.values())[0];
 
   const { isOnline, isSyncing, lastSyncTime, triggerSync } = useNetworkStatus();
-  const { isInstalled, isWindows, isAndroid, promptInstall, downloadWindowsLauncher, downloadWindowsShortcut } = usePWAInstall();
+  const { isInstalled, isWindows, isAndroid, isIOS, isInstallable, promptInstall, downloadWindowsLauncher, downloadWindowsShortcut } = usePWAInstall();
 
-  const [activeTab, setActiveTab] = useState<'DADOS' | 'IMPOSTOS' | 'PAGAMENTOS' | 'IMPRESSORA' | 'SISTEMA'>('DADOS');
+  const [activeTab, setActiveTab] = useState<'DADOS' | 'IMPOSTOS' | 'PAGAMENTOS' | 'IMPRESSORA' | 'SISTEMA' | 'LICENCA'>('DADOS');
 
   // Form states
   const [storeName, setStoreName] = useState(company?.tradeName || company?.name || 'Minha Loja');
@@ -148,6 +150,20 @@ export const OperatorSettingsView: React.FC<OperatorSettingsViewProps> = ({ curr
         >
           Backup &amp; Sistema
         </button>
+        {canAccessAdminLayout(currentUser) && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('LICENCA')}
+            className={`pb-2.5 px-3 text-xs font-bold transition-all border-b-2 whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'LICENCA'
+                ? 'border-amber-500 text-amber-600 font-extrabold'
+                : 'border-transparent text-slate-500 hover:text-amber-700'
+            }`}
+          >
+            <KeyRound className="w-3.5 h-3.5 text-amber-500" />
+            <span>Licença (Admin A)</span>
+          </button>
+        )}
       </div>
 
       {/* Conteúdo da Aba DADOS DA LOJA (100% fiel ao mockup da imagem) */}
@@ -537,10 +553,10 @@ export const OperatorSettingsView: React.FC<OperatorSettingsViewProps> = ({ curr
                   <button
                     type="button"
                     onClick={async () => {
-                      if (isAndroid) {
+                      if (isInstallable) {
                         const outcome = await promptInstall();
                         if (outcome === 'accepted') {
-                          setFeedbackSuccess('Aplicação instalada com sucesso no Android!');
+                          setFeedbackSuccess('Aplicação instalada com sucesso no telemóvel!');
                           return;
                         }
                       }
@@ -579,6 +595,11 @@ export const OperatorSettingsView: React.FC<OperatorSettingsViewProps> = ({ curr
             </div>
           </div>
         </div>
+      )}
+
+      {/* Conteúdo da Aba LICENÇA (Exclusivo Administrador A) */}
+      {activeTab === 'LICENCA' && canAccessAdminLayout(currentUser) && (
+        <LicenseManagerView currentUser={currentUser} />
       )}
 
       {/* Banner Informativo de Certificação no Rodapé */}

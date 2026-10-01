@@ -22,6 +22,8 @@ import {
 } from '../types/erp';
 import { PGC_ANGOLANO_CHART } from '../engines/AccountingEngine';
 import { LocalPersistenceEngine } from '../storage/LocalPersistenceEngine';
+import { LicenseInfo } from '../types/license';
+import { LicenseService } from '../security/LicenseService';
 
 export class FiscalDatabase {
   private static instance: FiscalDatabase;
@@ -38,6 +40,7 @@ export class FiscalDatabase {
   public documents: Map<string, FiscalDocument> = new Map();
   public payments: Map<string, Payment> = new Map();
   public agtQueue: AGTTransmissionQueue;
+  public license!: LicenseInfo;
 
   // Colecções da Fase 4 (ERP Completo)
   public warehouses: Map<string, Warehouse> = new Map();
@@ -58,6 +61,17 @@ export class FiscalDatabase {
     this.agtQueue.subscribe(() => this.notify());
     this.seedInitialData();
     LocalPersistenceEngine.hydrateFromLocalStorage(this);
+    this.license = LocalPersistenceEngine.getLicense() || LicenseService.createDefaultLicense();
+  }
+
+  public getLicense(): LicenseInfo {
+    return this.license;
+  }
+
+  public updateLicense(newLicense: LicenseInfo): void {
+    this.license = newLicense;
+    LocalPersistenceEngine.saveLicense(newLicense);
+    this.notify();
   }
 
   static getInstance(): FiscalDatabase {

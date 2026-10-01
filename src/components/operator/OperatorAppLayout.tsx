@@ -12,8 +12,13 @@ import { OperatorUsersView } from './OperatorUsersView';
 import { OperatorSettingsView } from './OperatorSettingsView';
 import { OperatorCashView } from './OperatorCashView';
 import { PublicInvoiceVerificationView } from '../fiscal/PublicInvoiceVerificationView';
+import { LicenseManagerView } from '../admin/LicenseManagerView';
 import { InstallAndSyncModal } from '../common/InstallAndSyncModal';
+import { AndroidInstallGuideModal } from '../common/AndroidInstallGuideModal';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
+import { usePWAInstall } from '../../hooks/usePWAInstall';
+import { FiscalDatabase } from '../../core/fiscal/repository/FiscalDatabase';
+import { LicenseService } from '../../core/fiscal/security/LicenseService';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -25,6 +30,7 @@ import {
   BarChart3,
   UserCheck,
   Settings,
+  KeyRound,
   Search,
   Bell,
   ChevronDown,
@@ -37,6 +43,9 @@ import {
   Cloud,
   Wifi,
   WifiOff,
+  ChevronRight,
+  Smartphone,
+  Sparkles,
 } from 'lucide-react';
 
 interface OperatorAppLayoutProps {
@@ -62,10 +71,30 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
   const [userMenuOpen, setUserMenuOpen] = useState<boolean>(false);
   const [globalSearch, setGlobalSearch] = useState<string>('');
   const { isOnline } = useNetworkStatus();
+  const { isInstalled, isAndroid, isIOS, isInstallable, promptInstall } = usePWAInstall();
   const [showInstallModal, setShowInstallModal] = useState<boolean>(false);
-  const [installModalTab, setInstallModalTab] = useState<'INSTALLER' | 'STORAGE'>('INSTALLER');
+  const [showAndroidGuideModal, setShowAndroidGuideModal] = useState<boolean>(false);
+  const [installModalTab, setInstallModalTab] = useState<'INSTALLER' | 'STORAGE' | 'NETLIFY'>('INSTALLER');
 
-  // 10 Módulos fiéis ao layout de referência
+  const handleOpenInstall = async () => {
+    if (isAndroid || isIOS) {
+      if (isInstallable) {
+        const res = await promptInstall();
+        if (res === 'accepted') return;
+      }
+      setShowAndroidGuideModal(true);
+      return;
+    }
+    setInstallModalTab('INSTALLER');
+    setShowInstallModal(true);
+  };
+
+  const isOnlyAdminA = canAccessAdminLayout(currentUser);
+  const db = FiscalDatabase.getInstance();
+  const currentLicense = db.getLicense();
+  const licenseDaysLeft = LicenseService.getDaysRemaining(currentLicense.expirationDate);
+
+  // 10 Módulos fiéis ao layout de referência + Licenciamento (exclusivo Administrador A)
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'vendas', label: 'Vendas', icon: ShoppingCart },
@@ -77,126 +106,142 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
     { id: 'relatorios', label: 'Relatórios', icon: BarChart3 },
     { id: 'utilizadores', label: 'Utilizadores', icon: UserCheck },
     { id: 'definicoes', label: 'Configurações', icon: Settings },
+    ...(isOnlyAdminA
+      ? [{ id: 'licenca', label: 'Licenciamento', icon: KeyRound, isSpecial: true }]
+      : []),
   ];
 
   return (
     <div id="minha-loja-layout" className="flex h-screen w-full bg-[#f8fafc] text-slate-800 font-sans overflow-hidden">
-      {/* 1. SIDEBAR AZUL ESCURO / MARINHO COM IDENTIDADE "MINHA LOJA" */}
-      <aside className="w-64 bg-[#081b3d] text-white flex flex-col justify-between shrink-0 shadow-lg select-none z-20">
-        <div className="overflow-y-auto">
-          {/* Nome e Marca "Minha Loja" conforme mockup */}
-          <div className="p-4 border-b border-white/10 bg-slate-900/60">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold shrink-0 shadow-xs">
-                <Store className="w-4 h-4 text-white" />
-              </div>
-              <div className="min-w-0">
-                <div className="font-extrabold text-sm tracking-tight text-white leading-tight truncate">
-                  Minha Loja
-                </div>
-                <div className="text-[10px] text-blue-300 font-semibold tracking-wide">
-                  Sistema de Gestão &amp; POS
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* 1. SIDEBAR AZUL ESCURO / MARINHO ULTRA COMPACTO CONFORME IMAGEM DE REFERÊNCIA (< 5 CM) */}
+      <aside
+        style={{ width: '64px', maxWidth: '5cm' }}
+        className="w-[64px] max-w-[5cm] bg-[#061224] text-white flex flex-col items-center justify-between shrink-0 shadow-2xl select-none z-30 py-3 relative border-r border-sky-950/70 overflow-visible"
+      >
+        {/* Navegação Vertical de Módulos (Ícones Alinhados ao Centro) */}
+        <div className="w-full flex flex-col items-center space-y-2 overflow-visible">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeNav === item.id;
+            return (
+              <div key={item.id} className="relative group flex items-center justify-center w-full px-2">
+                {/* Linha indicadora azul claro no item ativo */}
+                {isActive && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-sky-400 rounded-r shadow-[0_0_8px_rgba(56,189,248,0.9)]" />
+                )}
 
-          {/* Navegação dos 10 Módulos */}
-          <nav className="p-3 space-y-0.5 mt-1">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeNav === item.id;
-              return (
                 <button
-                  key={item.id}
+                  type="button"
                   onClick={() => setActiveNav(item.id)}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  className={`w-11 h-11 flex items-center justify-center rounded-2xl transition-all duration-150 cursor-pointer ${
                     isActive
-                      ? 'bg-blue-600 text-white shadow-sm font-bold'
-                      : 'text-slate-300 hover:text-white hover:bg-white/5'
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/50 ring-2 ring-blue-400/40'
+                      : 'text-slate-400 hover:text-sky-300 hover:bg-white/10'
                   }`}
+                  aria-label={item.label}
+                  title={item.label}
                 >
-                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span className="truncate">{item.label}</span>
+                  <Icon className="w-5 h-5 shrink-0" />
                 </button>
-              );
-            })}
-          </nav>
+
+                {/* FAIXA QUE SE ESTENDE COM O NOME EM AZUL CLARO AO PASSAR O CURSOR */}
+                <div
+                  onClick={() => setActiveNav(item.id)}
+                  className="absolute left-[58px] top-1/2 -translate-y-1/2 z-50 pointer-events-none opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-150 ease-out origin-left -translate-x-2 group-hover:translate-x-0 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5 px-3.5 py-2 bg-[#071630]/98 backdrop-blur-md border border-sky-400/50 rounded-xl shadow-[0_8px_25px_rgba(0,0,0,0.8)] whitespace-nowrap min-w-[130px]">
+                    <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse shadow-[0_0_8px_rgba(56,189,248,1)]"></span>
+                    <span className="text-sky-300 font-extrabold text-xs tracking-wider uppercase drop-shadow-xs">
+                      {item.label}
+                    </span>
+                    <ChevronRight className="w-3.5 h-3.5 text-sky-400 ml-auto" />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-        {/* Rodapé da Barra Lateral */}
-        <div className="p-3 border-t border-white/5 space-y-1.5 shrink-0 bg-[#061530]">
-          {/* Validação de QR & Fecho de Caixa rápidos */}
-          <div className="grid grid-cols-2 gap-1.5">
+        {/* Rodapé da Barra Lateral com Ações Compactas */}
+        <div className="w-full flex flex-col items-center space-y-2 pt-3 border-t border-white/10 shrink-0 px-2 overflow-visible">
+          {/* Caixa Diário */}
+          <div className="relative group flex items-center justify-center w-full">
             <button
+              type="button"
               onClick={() => setActiveNav('caixa')}
-              className={`py-1.5 px-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer ${
+              className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all cursor-pointer ${
                 activeNav === 'caixa'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white/5 text-slate-300 hover:bg-white/10'
+                  ? 'bg-amber-500 text-white shadow-md'
+                  : 'text-amber-400/80 hover:text-amber-300 hover:bg-amber-500/15'
               }`}
-              title="Abrir conferência de caixa"
+              aria-label="Caixa Diário"
             >
-              <DollarSign className="w-3 h-3 text-amber-400" />
-              <span>Caixa Diário</span>
+              <DollarSign className="w-4 h-4" />
             </button>
-            <button
-              onClick={() => setActiveNav('validar')}
-              className={`py-1.5 px-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer ${
-                activeNav === 'validar'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white/5 text-slate-300 hover:bg-white/10'
-              }`}
-              title="Validação pública de fatura com QR Code"
+            <div
+              onClick={() => setActiveNav('caixa')}
+              className="absolute left-[58px] top-1/2 -translate-y-1/2 z-50 pointer-events-none opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-150 ease-out origin-left -translate-x-2 group-hover:translate-x-0 cursor-pointer"
             >
-              <QrCode className="w-3 h-3 text-emerald-400" />
-              <span>Validar QR</span>
-            </button>
+              <div className="flex items-center gap-2 px-3.5 py-2 bg-[#071630]/98 backdrop-blur-md border border-amber-400/50 rounded-xl shadow-2xl whitespace-nowrap">
+                <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                <span className="text-sky-300 font-extrabold text-xs tracking-wider uppercase">
+                  Caixa Diário
+                </span>
+                <ChevronRight className="w-3.5 h-3.5 text-sky-400 ml-auto" />
+              </div>
+            </div>
           </div>
 
-          {/* Botão de Consola Técnica Admin se for Admin */}
-          {currentUser.role === 'ADMIN' && onOpenAdminMode && (
+          {/* Validar QR */}
+          <div className="relative group flex items-center justify-center w-full">
             <button
-              onClick={onOpenAdminMode}
-              className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg bg-amber-400/10 text-amber-300 hover:bg-amber-400/20 text-[11px] font-bold border border-amber-400/30 transition-all cursor-pointer"
-              title="Voltar à Consola Técnica com as 4 Fases"
+              type="button"
+              onClick={() => setActiveNav('validar')}
+              className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all cursor-pointer ${
+                activeNav === 'validar'
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'text-emerald-400/80 hover:text-emerald-300 hover:bg-emerald-500/15'
+              }`}
+              aria-label="Validar Fatura QR"
             >
-              <Shield className="w-3 h-3" />
-              <span>Consola Técnica Admin</span>
+              <QrCode className="w-4 h-4" />
             </button>
-          )}
-
-          {/* Botão de Instalação e Armazenamento no Sidebar */}
-          <button
-            onClick={() => {
-              setInstallModalTab('INSTALLER');
-              setShowInstallModal(true);
-            }}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 border border-blue-400/30 text-xs font-bold transition-all cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5 text-blue-300" />
-            <span>Instalar no PC / Telemóvel</span>
-          </button>
-
-          <div
-            onClick={() => {
-              setInstallModalTab('STORAGE');
-              setShowInstallModal(true);
-            }}
-            className="p-2 rounded-lg bg-white/5 border border-white/5 flex items-center justify-between cursor-pointer hover:bg-white/10 transition-colors"
-            title="Clique para gerir sincronização e cópias de segurança"
-          >
-            <div className="flex items-center gap-1.5">
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  isOnline ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-amber-400'
-                }`}
-              ></span>
-              <span className="text-[11px] font-medium text-slate-200">
-                {isOnline ? 'Sistema online (Nuvem)' : 'Sistema offline (Local)'}
-              </span>
+            <div
+              onClick={() => setActiveNav('validar')}
+              className="absolute left-[58px] top-1/2 -translate-y-1/2 z-50 pointer-events-none opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-150 ease-out origin-left -translate-x-2 group-hover:translate-x-0 cursor-pointer"
+            >
+              <div className="flex items-center gap-2 px-3.5 py-2 bg-[#071630]/98 backdrop-blur-md border border-emerald-400/50 rounded-xl shadow-2xl whitespace-nowrap">
+                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span className="text-sky-300 font-extrabold text-xs tracking-wider uppercase">
+                  Validar Fatura QR
+                </span>
+                <ChevronRight className="w-3.5 h-3.5 text-sky-400 ml-auto" />
+              </div>
             </div>
-            <span className="text-[9px] text-slate-400 font-mono">v1.0.0</span>
+          </div>
+
+          {/* Instalar App / Central de Instalação */}
+          <div className="relative group flex items-center justify-center w-full">
+            <button
+              type="button"
+              onClick={handleOpenInstall}
+              className="w-10 h-10 flex items-center justify-center rounded-xl text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 transition-all cursor-pointer"
+              aria-label="Instalar Aplicação"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+            <div
+              onClick={handleOpenInstall}
+              className="absolute left-[58px] top-1/2 -translate-y-1/2 z-50 pointer-events-none opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-150 ease-out origin-left -translate-x-2 group-hover:translate-x-0 cursor-pointer"
+            >
+              <div className="flex items-center gap-2 px-3.5 py-2 bg-[#071630]/98 backdrop-blur-md border border-sky-400/50 rounded-xl shadow-2xl whitespace-nowrap">
+                <span className="w-2 h-2 rounded-full bg-sky-400"></span>
+                <span className="text-sky-300 font-extrabold text-xs tracking-wider uppercase">
+                  Instalar Aplicação
+                </span>
+                <ChevronRight className="w-3.5 h-3.5 text-sky-400 ml-auto" />
+              </div>
+            </div>
           </div>
         </div>
       </aside>
@@ -204,9 +249,25 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
       {/* 2. ÁREA PRINCIPAL COM HEADER BRANCO SUPERIOR E CONTEÚDO SCROLLÁVEL */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header Branco */}
-        <header className="h-16 bg-white border-b border-slate-200/80 px-6 flex items-center justify-between shrink-0 z-10">
+        <header className="h-16 bg-white border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between shrink-0 z-10 gap-3">
+          {/* Identidade "Minha Loja" e Módulo Ativo */}
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-xs">
+              <Store className="w-4.5 h-4.5 text-white" />
+            </div>
+            <div>
+              <div className="font-extrabold text-xs text-slate-900 leading-tight flex items-center gap-1.5">
+                <span>Minha Loja</span>
+                <span className="text-[9px] px-1.5 py-0.2 bg-blue-100 text-blue-700 font-bold rounded-md">POS</span>
+              </div>
+              <div className="text-[10px] text-blue-600 font-semibold tracking-wide capitalize">
+                {menuItems.find((m) => m.id === activeNav)?.label || activeNav}
+              </div>
+            </div>
+          </div>
+
           {/* Barra de Pesquisa Geral */}
-          <div className="relative w-full max-w-md">
+          <div className="relative flex-1 max-w-md hidden md:block">
             <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
             <input
               type="text"
@@ -244,10 +305,7 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
 
             {/* Botão de Instalador Windows & Android */}
             <button
-              onClick={() => {
-                setInstallModalTab('INSTALLER');
-                setShowInstallModal(true);
-              }}
+              onClick={handleOpenInstall}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer"
               title="Instalar no Windows ou Android"
             >
@@ -277,6 +335,34 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
               <Bell className="w-5 h-5" />
               <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
                 3
+              </span>
+            </button>
+
+            {/* Badge de Licença do Sistema */}
+            <button
+              type="button"
+              onClick={() => {
+                if (isOnlyAdminA) {
+                  setActiveNav('licenca');
+                }
+              }}
+              className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer ${
+                currentLicense.plan === 'ANUAL'
+                  ? 'bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100 shadow-2xs'
+                  : currentLicense.plan === 'SEMESTRAL'
+                  ? 'bg-blue-50 text-blue-900 border-blue-300 hover:bg-blue-100 shadow-2xs'
+                  : 'bg-amber-50 text-amber-950 border-amber-300 hover:bg-amber-100 shadow-2xs'
+              }`}
+              title={isOnlyAdminA ? 'Clique para gerir o plano de licença no módulo do Administrador A' : 'Licença do Sistema'}
+            >
+              <KeyRound className="w-3.5 h-3.5 text-current shrink-0" />
+              <span>
+                {currentLicense.plan === 'ANUAL'
+                  ? 'Licença Anual'
+                  : currentLicense.plan === 'SEMESTRAL'
+                  ? 'Licença Semestral'
+                  : 'Licença Demo'}
+                {licenseDaysLeft > 0 ? ` (${licenseDaysLeft}d)` : ' (Expirada)'}
               </span>
             </button>
 
@@ -358,6 +444,22 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
                     </div>
                   )}
 
+                  {/* Acesso exclusivo ao Módulo Licença: Apenas Administrador A */}
+                  {isOnlyAdminA && (
+                    <div className="p-2 border-b border-slate-100">
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          setActiveNav('licenca');
+                        }}
+                        className="w-full py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black text-center flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                      >
+                        <KeyRound className="w-3.5 h-3.5 text-slate-950" />
+                        <span>Módulo Licença (Admin A)</span>
+                      </button>
+                    </div>
+                  )}
+
                   {/* Acesso exclusivo ao Layout Técnico Admin: Apenas Administrador A */}
                   {canAccessAdminLayout(currentUser) && onOpenAdminMode && (
                     <div className="p-2 border-b border-slate-100">
@@ -424,6 +526,23 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
           </div>
         </header>
 
+        {/* Banner de Instalação Mobile quando aberto no telemóvel e não instalado como standalone */}
+        {!isInstalled && (
+          <div className="md:hidden bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 text-white px-3.5 py-2 flex items-center justify-between shadow-xs shrink-0">
+            <div className="flex items-center gap-2 text-xs font-bold">
+              <Smartphone className="w-4 h-4 text-sky-300 shrink-0" />
+              <span>Instalar App Móvel no Telemóvel (Offline)</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleOpenInstall}
+              className="px-3 py-1 bg-white text-blue-800 hover:bg-sky-50 rounded-lg text-[11px] font-black shadow-xs cursor-pointer transition-colors"
+            >
+              Instalar Agora
+            </button>
+          </div>
+        )}
+
         {/* Conteúdo Dinâmico dos 10 Módulos */}
         <main className="flex-1 overflow-y-auto p-6">
           <div className="max-w-[1550px] mx-auto w-full">
@@ -444,6 +563,12 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
               <OperatorUsersView currentUser={currentUser} onSwitchUser={onSwitchUser} />
             )}
             {activeNav === 'definicoes' && <OperatorSettingsView currentUser={currentUser} />}
+            {activeNav === 'licenca' && isOnlyAdminA && (
+              <LicenseManagerView
+                currentUser={currentUser}
+                onNavigateTab={(tab) => setActiveNav(tab)}
+              />
+            )}
 
             {/* Vias Auxiliares */}
             {activeNav === 'caixa' && <OperatorCashView currentUser={currentUser} />}
@@ -459,6 +584,12 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
         isOpen={showInstallModal}
         onClose={() => setShowInstallModal(false)}
         initialTab={installModalTab}
+      />
+
+      {/* Modal Guiado de Instalação Móvel (Android / iOS) */}
+      <AndroidInstallGuideModal
+        isOpen={showAndroidGuideModal}
+        onClose={() => setShowAndroidGuideModal(false)}
       />
     </div>
   );

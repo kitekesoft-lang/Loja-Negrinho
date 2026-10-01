@@ -15,6 +15,7 @@ import { RoadmapView } from './components/RoadmapView';
 import { ArchitectureView } from './components/ArchitectureView';
 import { DatabaseModelView } from './components/DatabaseModelView';
 import { PublicInvoiceVerificationView } from './components/fiscal/PublicInvoiceVerificationView';
+import { LicenseManagerView } from './components/admin/LicenseManagerView';
 import { OperatorAppLayout } from './components/operator/OperatorAppLayout';
 import { LoginForm } from './components/auth/LoginForm';
 import { FirstAccessChangePasswordModal } from './components/auth/FirstAccessChangePasswordModal';
@@ -197,6 +198,7 @@ export default function App() {
         </section>
 
         {/* Dynamic Tab Content */}
+        {activeTab === 'license' && <LicenseManagerView currentUser={currentUser} onNavigateTab={(tab) => setActiveTab(tab)} />}
         {activeTab === 'erp' && <ERPDashboardView />}
         {activeTab === 'verify' && <PublicInvoiceVerificationView onBackToApp={() => setActiveTab('erp')} />}
         {activeTab === 'erp-tests' && <Phase4TestRunnerView />}

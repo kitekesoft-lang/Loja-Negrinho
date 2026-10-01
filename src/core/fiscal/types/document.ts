@@ -82,6 +82,9 @@ export interface FiscalDocument {
   isLocked: boolean; // Immutable after issuance
   issuedByUserId: string;
   notes?: string;
+  amountReceived?: number;
+  changeAmount?: number;
+  paymentMethodName?: string;
   createdAt: string;
   updatedAt: string;
 }

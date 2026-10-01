@@ -259,6 +259,31 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
                     {document.netTotal.toLocaleString('pt-AO', { minimumFractionDigits: 2 })} AOA
                   </span>
                 </div>
+
+                {/* Pagamento e Troco no Talão POS */}
+                <div className="pt-1 border-t border-dashed border-stone-300 space-y-0.5 text-[10.5px]">
+                  <div className="flex justify-between text-stone-600">
+                    <span>Modo de Pagamento:</span>
+                    <span className="font-semibold text-stone-900">{document.paymentMethodName || 'Dinheiro (Kz)'}</span>
+                  </div>
+                  {document.amountReceived !== undefined && document.amountReceived > 0 && (
+                    <div className="flex justify-between text-stone-600">
+                      <span>Valor Entregue:</span>
+                      <span className="font-mono font-medium">{document.amountReceived.toLocaleString('pt-AO', { minimumFractionDigits: 2 })} AOA</span>
+                    </div>
+                  )}
+                  {document.changeAmount !== undefined && document.changeAmount > 0 ? (
+                    <div className="flex justify-between font-extrabold text-emerald-800 text-xs pt-0.5 border-t border-dashed border-stone-300">
+                      <span>TROCO:</span>
+                      <span className="font-mono">{document.changeAmount.toLocaleString('pt-AO', { minimumFractionDigits: 2 })} AOA</span>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between text-stone-500 text-[10px]">
+                      <span>Troco:</span>
+                      <span className="font-mono">0,00 AOA (Exato)</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Resumo de IVA (AGT Obrigatório) */}
@@ -480,6 +505,26 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
                     <span className="font-mono text-lg text-emerald-800">
                       {document.netTotal.toLocaleString('pt-AO', { minimumFractionDigits: 2 })} AOA
                     </span>
+                  </div>
+
+                  {/* Informações de Pagamento e Troco na Factura A4 */}
+                  <div className="pt-2 border-t border-stone-200 text-xs space-y-1">
+                    <div className="flex justify-between text-stone-600">
+                      <span>Modo de Pagamento:</span>
+                      <span className="font-semibold text-stone-900">{document.paymentMethodName || 'Dinheiro (Kz)'}</span>
+                    </div>
+                    {document.amountReceived !== undefined && document.amountReceived > 0 && (
+                      <div className="flex justify-between text-stone-600">
+                        <span>Valor Entregue pelo Cliente:</span>
+                        <span className="font-mono">{document.amountReceived.toLocaleString('pt-AO', { minimumFractionDigits: 2 })} AOA</span>
+                      </div>
+                    )}
+                    {document.changeAmount !== undefined && document.changeAmount > 0 && (
+                      <div className="flex justify-between font-bold text-emerald-800 text-xs bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
+                        <span>Troco Devolvido:</span>
+                        <span className="font-mono">{document.changeAmount.toLocaleString('pt-AO', { minimumFractionDigits: 2 })} AOA</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

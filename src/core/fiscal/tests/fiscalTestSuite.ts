@@ -1108,13 +1108,53 @@ export class FiscalTestSuite {
     }
     assertions.push('Sessão subsequente concede acesso direto aos módulos com nova credencial.');
 
+    // 9. Validação do Módulo de Licença: Exclusivo ao Administrador A
+    const { LicenseService } = await import('../security/LicenseService');
+    const { FiscalDatabase } = await import('../repository/FiscalDatabase');
+    const db = FiscalDatabase.getInstance();
+
+    if (!LicenseService.canManageLicense(adminA)) {
+      throw new Error('Administrador A deve ter permissão exclusiva para gerir licenças');
+    }
+    if (LicenseService.canManageLicense(adminB)) {
+      throw new Error('Administrador B NÃO deve ter permissão para gerir licenças');
+    }
+    assertions.push('Exclusividade do módulo de licença ao Administrador A confirmada.');
+
+    // 10. Teste de definição dos 3 planos (Demo, Semestral e Anual)
+    const initialLic = db.getLicense();
+    
+    // Teste Demo (15 dias)
+    const demoLic = LicenseService.setLicensePlan(initialLic, 'DEMO', adminA, 15);
+    if (demoLic.plan !== 'DEMO' || demoLic.durationDays !== 15) {
+      throw new Error('Falha ao definir plano Demo com duração de 15 dias');
+    }
+    assertions.push('Plano Demo (15 dias) configurado e validado com sucesso.');
+
+    // Teste Semestral (180 dias)
+    const semestralLic = LicenseService.setLicensePlan(demoLic, 'SEMESTRAL', adminA, 180);
+    if (semestralLic.plan !== 'SEMESTRAL' || semestralLic.durationDays !== 180) {
+      throw new Error('Falha ao definir plano Semestral com duração de 180 dias');
+    }
+    assertions.push('Plano Semestral (180 dias / 6 meses) configurado e validado com sucesso.');
+
+    // Teste Anual (365 dias)
+    const anualLic = LicenseService.setLicensePlan(semestralLic, 'ANUAL', adminA, 365);
+    if (anualLic.plan !== 'ANUAL' || anualLic.durationDays !== 365) {
+      throw new Error('Falha ao definir plano Anual com duração de 365 dias');
+    }
+    assertions.push('Plano Anual (365 dias / 1 ano fiscal) configurado e validado com sucesso.');
+
+    // Restaurar estado da licença na base de dados
+    db.updateLicense(anualLic);
+
     // Restaurar palavra-passe para testes subsequentes determinísticos
     adminA.password = 'chave123';
     adminA.mustChangePassword = true;
 
     return {
       id: 'TEST-21',
-      name: '1.19 Login Seguro, Alteração Obrigatória no 1.º Acesso e Segregação de Layout (Admin A vs Admin B)',
+      name: '1.19 Login Seguro, Segregação de Layout e Módulo Licença Exclusivo Admin A (Demo, Semestral, Anual)',
       category: 'Segurança & Validação',
     };
   }

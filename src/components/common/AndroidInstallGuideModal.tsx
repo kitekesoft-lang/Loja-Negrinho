@@ -14,6 +14,10 @@ import {
   WifiOff,
   ScanBarcode,
   Layers,
+  ArrowRight,
+  AlertTriangle,
+  Globe,
+  Compass,
 } from 'lucide-react';
 import { getPublicShareableUrl, openAndroidChrome } from '../../utils/appUrl';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
@@ -27,12 +31,27 @@ export const AndroidInstallGuideModal: React.FC<AndroidInstallGuideModalProps> =
   isOpen,
   onClose,
 }) => {
-  const { isInstalled, isAndroid, promptInstall, downloadAndroidLauncher, shareAppUrl } =
-    usePWAInstall();
+  const {
+    isInstallable,
+    isInstalled,
+    isAndroid,
+    isIOS,
+    isChrome,
+    isSamsung,
+    isInAppBrowser,
+    promptInstall,
+    downloadAndroidLauncher,
+    shareAppUrl,
+  } = usePWAInstall();
 
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+  const [activeBrowserTab, setActiveBrowserTab] = useState<'CHROME' | 'SAMSUNG' | 'XIAOMI' | 'IOS'>(() => {
+    if (isIOS) return 'IOS';
+    if (isSamsung) return 'SAMSUNG';
+    return 'CHROME';
+  });
 
   const publicUrl = getPublicShareableUrl();
 
@@ -42,7 +61,7 @@ export const AndroidInstallGuideModal: React.FC<AndroidInstallGuideModalProps> =
         width: 280,
         margin: 1.5,
         color: {
-          dark: '#0f172a',
+          dark: '#061224',
           light: '#ffffff',
         },
       })
@@ -57,19 +76,19 @@ export const AndroidInstallGuideModal: React.FC<AndroidInstallGuideModalProps> =
     try {
       await navigator.clipboard.writeText(publicUrl);
       setCopied(true);
-      setActionFeedback('Link copiado com sucesso! Pode colar no Chrome ou partilhar.');
+      setActionFeedback('Link copiado com sucesso! Pode colar no Google Chrome do telemóvel.');
       setTimeout(() => {
         setCopied(false);
         setActionFeedback(null);
       }, 3500);
     } catch {
-      setActionFeedback('Não foi possível copiar automaticamente. Selecione e copie o link acima.');
+      setActionFeedback('Não foi possível copiar automaticamente. Selecione e copie o endereço.');
       setTimeout(() => setActionFeedback(null), 3500);
     }
   };
 
   const handleOpenChrome = () => {
-    setActionFeedback('A abrir no navegador...');
+    setActionFeedback('A abrir no navegador Google Chrome...');
     openAndroidChrome(publicUrl);
     setTimeout(() => setActionFeedback(null), 3000);
   };
@@ -83,36 +102,47 @@ export const AndroidInstallGuideModal: React.FC<AndroidInstallGuideModalProps> =
   };
 
   const handleNativePrompt = async () => {
+    setActionFeedback('A verificar permissões de instalação do navegador...');
     const res = await promptInstall();
     if (res === 'accepted') {
-      setActionFeedback('Aplicação instalada com sucesso no dispositivo!');
+      setActionFeedback('🎉 Aplicação instalada com sucesso no telemóvel!');
       setTimeout(() => setActionFeedback(null), 4000);
-    } else if (res === 'manual') {
-      setActionFeedback('Siga os 3 passos abaixo no Chrome do seu telemóvel para instalar.');
+    } else if (res === 'dismissed') {
+      setActionFeedback('Instalação cancelada. Pode tentar novamente quando desejar.');
+      setTimeout(() => setActionFeedback(null), 3500);
+    } else {
+      setActionFeedback('Siga os passos abaixo no menu do navegador para fixar no ecrã.');
       setTimeout(() => setActionFeedback(null), 4500);
     }
   };
 
+  const isMobileDevice = isAndroid || isIOS || (typeof window !== 'undefined' && window.innerWidth < 768);
+
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
       <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full my-6 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Cabeçalho */}
-        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white p-5 flex items-start justify-between">
+        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-[#061224] text-white p-5 flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-inner">
+            <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-inner shrink-0">
               <Smartphone className="w-6 h-6 text-white" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-base sm:text-lg">Instalador &amp; Acesso Android</h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-extrabold text-base sm:text-lg">Instalação no Telemóvel</h3>
                 {isAndroid && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-300 text-emerald-950 uppercase tracking-wider">
-                    Android Detectado
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-400 text-emerald-950 uppercase tracking-wider">
+                    Android
+                  </span>
+                )}
+                {isIOS && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-sky-300 text-sky-950 uppercase tracking-wider">
+                    iOS / iPhone
                   </span>
                 )}
               </div>
-              <p className="text-emerald-100 text-xs">
-                Smartphone &bull; Tablet &bull; Operação Offline &bull; Leitor de Câmara
+              <p className="text-blue-100 text-xs">
+                App autónoma &bull; Sem barra de URL &bull; Funciona 100% Offline
               </p>
             </div>
           </div>
@@ -127,182 +157,326 @@ export const AndroidInstallGuideModal: React.FC<AndroidInstallGuideModalProps> =
 
         {/* Feedback visual dinâmico */}
         {actionFeedback && (
-          <div className="bg-emerald-50 border-b border-emerald-200 px-4 py-2.5 text-xs text-emerald-900 font-semibold flex items-center gap-2 animate-in slide-in-from-top-1">
-            <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+          <div className="bg-blue-50 border-b border-blue-200 px-4 py-2.5 text-xs text-blue-900 font-semibold flex items-center gap-2 animate-in slide-in-from-top-1">
+            <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
             <span>{actionFeedback}</span>
           </div>
         )}
 
-        {/* Conteúdo Principal Rolável */}
-        <div className="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs">
-          {/* Seção 1: QR Code & Link Direto */}
-          <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4 sm:gap-5">
-            <div className="relative group shrink-0">
-              {qrCodeUrl ? (
-                <div className="p-2 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col items-center">
-                  <img
-                    src={qrCodeUrl}
-                    alt="QR Code para Telemóvel Android"
-                    className="w-36 h-36 sm:w-40 sm:h-40 rounded-xl"
-                  />
-                  <div className="mt-1 flex items-center gap-1 text-[10px] text-slate-500 font-medium">
-                    <QrCode className="w-3 h-3 text-emerald-600" />
-                    <span>Leitura Instantânea</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="w-40 h-40 bg-slate-200 rounded-2xl animate-pulse flex items-center justify-center text-slate-400">
-                  <QrCode className="w-8 h-8" />
-                </div>
-              )}
-            </div>
-
-            <div className="flex-1 w-full space-y-2.5 text-center sm:text-left">
-              <div className="space-y-1">
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-emerald-100 text-emerald-800">
-                  <Sparkles className="w-3 h-3 text-emerald-600" />
-                  URL Público Verificado
-                </span>
-                <h4 className="font-extrabold text-sm text-slate-900">
-                  Aponte a câmara do seu telemóvel
-                </h4>
-                <p className="text-slate-600 text-[11.5px] leading-relaxed">
-                  Abra a app de câmara ou scanner do Android para abrir o sistema diretamente. Sem necessidade de logins externos.
-                </p>
+        {/* Conteúdo Principal */}
+        <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs">
+          {/* Alerta de Navegador In-App (WhatsApp, Facebook, Instagram) */}
+          {isInAppBrowser && (
+            <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-2xl space-y-2 text-amber-950">
+              <div className="flex items-center gap-2 font-bold text-xs text-amber-900">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Navegador Interno Detectado (WhatsApp / Redes Sociais)</span>
               </div>
-
-              {/* Caixa com o endereço e botão de copiar */}
-              <div className="bg-white border border-slate-200 rounded-xl p-2 flex items-center justify-between gap-2 shadow-2xs">
-                <div className="font-mono text-[11px] text-slate-700 truncate select-all px-1">
-                  {publicUrl}
-                </div>
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  className={`px-3 py-1.5 rounded-lg font-bold text-[11px] flex items-center gap-1.5 shrink-0 transition-all cursor-pointer ${
-                    copied
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
-                  }`}
-                  title="Copiar endereço"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Copiado</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5 text-slate-600" />
-                      <span>Copiar</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Botões de Ação Imediata */}
-              <div className="grid grid-cols-2 gap-2 pt-1">
+              <p className="text-[11px] leading-relaxed text-amber-900/90">
+                O navegador embutido do WhatsApp ou redes sociais <strong>bloqueia a instalação de PWAs</strong>. Para instalar a App:
+              </p>
+              <div className="flex gap-2 pt-1">
                 <button
                   type="button"
                   onClick={handleOpenChrome}
-                  className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs text-center"
+                  className="flex-1 py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Abrir no Android</span>
+                  <span>Abrir no Google Chrome</span>
                 </button>
-
                 <button
                   type="button"
-                  onClick={handleShare}
-                  className="py-2.5 px-3 bg-white border border-slate-200 hover:bg-slate-100 text-slate-800 font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs text-center"
+                  onClick={handleCopy}
+                  className="py-2 px-3 bg-white border border-amber-300 text-amber-900 font-bold rounded-xl flex items-center gap-1.5 shadow-2xs hover:bg-amber-100 transition-colors cursor-pointer"
                 >
-                  <Share2 className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Partilhar Link</span>
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copiar Link</span>
                 </button>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Seção 2: Passos para Instalar como App Nativa no Android */}
-          <div className="border border-slate-200 rounded-2xl p-4 bg-white space-y-3">
+          {/* Botão de Ação Direta Principal */}
+          <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/80 rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="font-extrabold text-xs text-slate-900 flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-emerald-600" />
-                Como instalar no Android em 3 passos:
-              </h4>
-              <span className="text-[10px] text-slate-500 font-medium">
-                Google Chrome &bull; Samsung Browser
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[11.5px]">
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
-                <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white font-black text-xs flex items-center justify-center">
-                  1
-                </div>
-                <div className="font-bold text-slate-900">Abra o Link</div>
-                <p className="text-slate-600 leading-snug">
-                  Abra o endereço no <strong>Google Chrome</strong> do seu smartphone ou tablet Android.
-                </p>
-              </div>
-
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
-                <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white font-black text-xs flex items-center justify-center">
-                  2
-                </div>
-                <div className="font-bold text-slate-900">Menu de Opções</div>
-                <p className="text-slate-600 leading-snug">
-                  Toque nos <strong>3 pontinhos (&vellip;)</strong> no canto superior direito do navegador.
-                </p>
-              </div>
-
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
-                <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white font-black text-xs flex items-center justify-center">
-                  3
-                </div>
-                <div className="font-bold text-slate-900">Instalar Aplicativo</div>
-                <p className="text-slate-600 leading-snug">
-                  Toque em <strong>&quot;Instalar aplicativo&quot;</strong> ou <strong>&quot;Adicionar ao ecrã inicial&quot;</strong>.
+              <div className="space-y-0.5">
+                <h4 className="font-extrabold text-sm text-slate-900 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-blue-600" />
+                  <span>Instalação Direta no Ecrã Principal</span>
+                </h4>
+                <p className="text-[11.5px] text-slate-600">
+                  {isInstallable
+                    ? 'O seu navegador suporta instalação imediata em 1 toque.'
+                    : 'Toque abaixo para disparar o instalador ou siga o guia do seu navegador.'}
                 </p>
               </div>
             </div>
 
-            {/* Botão de Instalação Automática Direta */}
-            <div className="pt-2 flex flex-col sm:flex-row items-center gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 pt-1">
               <button
                 type="button"
                 onClick={handleNativePrompt}
-                className="w-full sm:flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-xs transition-colors"
+                className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl flex items-center justify-center gap-2 shadow-md shadow-blue-600/30 transition-all cursor-pointer text-sm"
               >
-                <Smartphone className="w-4 h-4" />
-                <span>Instalar Agora neste Dispositivo</span>
+                <Smartphone className="w-4.5 h-4.5" />
+                <span>Instalar Aplicativo Agora</span>
               </button>
 
               <button
                 type="button"
                 onClick={downloadAndroidLauncher}
-                className="w-full sm:w-auto py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
-                title="Descarregar ficheiro HTML para abrir no telemóvel"
+                className="py-3 px-3.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-800 font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                title="Descarregar ficheiro de lançamento rápido para o telemóvel"
               >
-                <FileDown className="w-4 h-4 text-emerald-600" />
-                <span>Descarregar Lançador (.html)</span>
+                <FileDown className="w-4 h-4 text-blue-600" />
+                <span>Lançador Offline (.html)</span>
               </button>
             </div>
           </div>
 
-          {/* Seção 3: Vantagens no Android */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-slate-700">
-            <div className="p-2.5 bg-slate-50 border border-slate-200/70 rounded-xl flex items-center gap-2">
-              <WifiOff className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span className="font-semibold text-[11px]">100% Offline (Local)</span>
+          {/* Guias Específicos por Navegador */}
+          <div className="border border-slate-200 rounded-2xl p-4 bg-white space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="font-extrabold text-xs text-slate-900 flex items-center gap-1.5">
+                <Layers className="w-4 h-4 text-blue-600" />
+                <span>Passo a Passo Manual no Telemóvel:</span>
+              </h4>
             </div>
-            <div className="p-2.5 bg-slate-50 border border-slate-200/70 rounded-xl flex items-center gap-2">
-              <ScanBarcode className="w-4 h-4 text-blue-600 shrink-0" />
-              <span className="font-semibold text-[11px]">Scanner por Câmara</span>
+
+            {/* Abas de Navegadores */}
+            <div className="flex gap-1.5 p-1 bg-slate-100 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setActiveBrowserTab('CHROME')}
+                className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-[11px] transition-all cursor-pointer ${
+                  activeBrowserTab === 'CHROME'
+                    ? 'bg-white text-blue-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Google Chrome
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveBrowserTab('SAMSUNG')}
+                className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-[11px] transition-all cursor-pointer ${
+                  activeBrowserTab === 'SAMSUNG'
+                    ? 'bg-white text-blue-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Samsung Internet
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveBrowserTab('XIAOMI')}
+                className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-[11px] transition-all cursor-pointer ${
+                  activeBrowserTab === 'XIAOMI'
+                    ? 'bg-white text-blue-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Xiaomi / Outros
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveBrowserTab('IOS')}
+                className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-[11px] transition-all cursor-pointer ${
+                  activeBrowserTab === 'IOS'
+                    ? 'bg-white text-blue-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                iPhone (Safari)
+              </button>
             </div>
-            <div className="p-2.5 bg-slate-50 border border-slate-200/70 rounded-xl flex items-center gap-2 col-span-2 sm:col-span-1">
-              <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
-              <span className="font-semibold text-[11px]">Sem Barras / Ecrã Total</span>
+
+            {/* Conteúdo da Aba Chrome */}
+            {activeBrowserTab === 'CHROME' && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[11px] pt-1">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+                  <div className="w-5 h-5 rounded-md bg-blue-600 text-white font-black text-xs flex items-center justify-center">
+                    1
+                  </div>
+                  <div className="font-bold text-slate-900">Abra no Chrome</div>
+                  <p className="text-slate-600 leading-snug">
+                    Aceda ao link da aplicação directamente no <strong>Google Chrome</strong> do telemóvel.
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+                  <div className="w-5 h-5 rounded-md bg-blue-600 text-white font-black text-xs flex items-center justify-center">
+                    2
+                  </div>
+                  <div className="font-bold text-slate-900">Toque nos 3 Pontos (⋮)</div>
+                  <p className="text-slate-600 leading-snug">
+                    Toque no menu <strong>⋮</strong> no canto superior direito do Google Chrome.
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+                  <div className="w-5 h-5 rounded-md bg-emerald-600 text-white font-black text-xs flex items-center justify-center">
+                    3
+                  </div>
+                  <div className="font-bold text-slate-900">Instalar Aplicativo</div>
+                  <p className="text-slate-600 leading-snug">
+                    Toque em <strong>&quot;Instalar aplicativo&quot;</strong> ou <strong>&quot;Adicionar ao ecrã inicial&quot;</strong>.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Conteúdo da Aba Samsung */}
+            {activeBrowserTab === 'SAMSUNG' && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[11px] pt-1">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+                  <div className="w-5 h-5 rounded-md bg-indigo-600 text-white font-black text-xs flex items-center justify-center">
+                    1
+                  </div>
+                  <div className="font-bold text-slate-900">Menu Inferior (☰)</div>
+                  <p className="text-slate-600 leading-snug">
+                    Toque no botão de menu <strong>☰</strong> (três linhas) no canto inferior direito.
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+                  <div className="w-5 h-5 rounded-md bg-indigo-600 text-white font-black text-xs flex items-center justify-center">
+                    2
+                  </div>
+                  <div className="font-bold text-slate-900">+ Adicionar Página A</div>
+                  <p className="text-slate-600 leading-snug">
+                    Selecione a opção <strong>&quot;+ Adicionar página a&quot;</strong>.
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+                  <div className="w-5 h-5 rounded-md bg-emerald-600 text-white font-black text-xs flex items-center justify-center">
+                    3
+                  </div>
+                  <div className="font-bold text-slate-900">Ecrã Principal</div>
+                  <p className="text-slate-600 leading-snug">
+                    Escolha <strong>&quot;Ecrã principal&quot;</strong>. O ícone oficial é criado imediatamente!
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Conteúdo da Aba Xiaomi */}
+            {activeBrowserTab === 'XIAOMI' && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[11px] pt-1">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+                  <div className="w-5 h-5 rounded-md bg-orange-600 text-white font-black text-xs flex items-center justify-center">
+                    1
+                  </div>
+                  <div className="font-bold text-slate-900">Menu do Navegador (⋯)</div>
+                  <p className="text-slate-600 leading-snug">
+                    Toque no botão de opções ou ferramentas no navegador Mi Browser.
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+                  <div className="w-5 h-5 rounded-md bg-orange-600 text-white font-black text-xs flex items-center justify-center">
+                    2
+                  </div>
+                  <div className="font-bold text-slate-900">Ferramentas / Ecrã</div>
+                  <p className="text-slate-600 leading-snug">
+                    Selecione <strong>&quot;Adicionar atalho ao ecrã inicial&quot;</strong>.
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+                  <div className="w-5 h-5 rounded-md bg-emerald-600 text-white font-black text-xs flex items-center justify-center">
+                    3
+                  </div>
+                  <div className="font-bold text-slate-900">Permissão do Sistema</div>
+                  <p className="text-slate-600 leading-snug">
+                    Confirme a adição para colocar o aplicativo no seu lançador MIUI/HyperOS.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Conteúdo da Aba iOS */}
+            {activeBrowserTab === 'IOS' && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[11px] pt-1">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+                  <div className="w-5 h-5 rounded-md bg-sky-600 text-white font-black text-xs flex items-center justify-center">
+                    1
+                  </div>
+                  <div className="font-bold text-slate-900">Abra no Safari</div>
+                  <p className="text-slate-600 leading-snug">
+                    No iPhone/iPad, a instalação exige que abra a página no navegador <strong>Safari</strong>.
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+                  <div className="w-5 h-5 rounded-md bg-sky-600 text-white font-black text-xs flex items-center justify-center">
+                    2
+                  </div>
+                  <div className="font-bold text-slate-900">Botão Partilhar (⎋)</div>
+                  <p className="text-slate-600 leading-snug">
+                    Toque no botão central de partilha (ícone de quadrado com seta para cima).
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+                  <div className="w-5 h-5 rounded-md bg-emerald-600 text-white font-black text-xs flex items-center justify-center">
+                    3
+                  </div>
+                  <div className="font-bold text-slate-900">Ecrã Principal</div>
+                  <p className="text-slate-600 leading-snug">
+                    Role para baixo e toque em <strong>&quot;Ecrã Principal&quot;</strong> (+) e confirme &quot;Adicionar&quot;.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Endereço Público e Ações de Partilha */}
+          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="font-bold text-slate-700">Endereço da Aplicação no Netlify:</span>
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copied ? 'Copiado' : 'Copiar'}</span>
+              </button>
+            </div>
+            <div className="bg-white border border-slate-200 rounded-xl p-2 font-mono text-[10.5px] text-slate-600 truncate select-all">
+              {publicUrl}
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={handleOpenChrome}
+                className="flex-1 py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer text-[11px]"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Abrir no Chrome</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleShare}
+                className="py-2 px-3 bg-white border border-slate-200 hover:bg-slate-100 text-slate-800 font-bold rounded-xl flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer text-[11px]"
+              >
+                <Share2 className="w-3.5 h-3.5 text-blue-600" />
+                <span>Partilhar</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Seção QR Code (Mais relevante quando visualizado no PC ou para partilhar com colega) */}
+          <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl flex flex-col sm:flex-row items-center gap-4">
+            {qrCodeUrl && (
+              <img
+                src={qrCodeUrl}
+                alt="QR Code de Instalação Móvel"
+                className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl bg-white p-1.5 border border-slate-200 shadow-xs shrink-0"
+              />
+            )}
+            <div className="space-y-1 text-center sm:text-left">
+              <div className="font-bold text-xs text-slate-900 flex items-center justify-center sm:justify-start gap-1">
+                <QrCode className="w-4 h-4 text-blue-600" />
+                <span>QR Code para outro telemóvel</span>
+              </div>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                Se estiver no computador de caixa ou quiser passar para o telemóvel de um operador, aponte a câmara do aparelho ao código acima para abrir de imediato.
+              </p>
             </div>
           </div>
         </div>
@@ -311,14 +485,14 @@ export const AndroidInstallGuideModal: React.FC<AndroidInstallGuideModalProps> =
         <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs">
           <div className="flex items-center gap-1.5 text-slate-500 text-[11px]">
             <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
-            <span>Compatível com Android 8.0 ou superior (WebAPK nativo).</span>
+            <span>Funciona offline e armazena os dados no dispositivo.</span>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-xl cursor-pointer transition-colors"
+            className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl cursor-pointer transition-colors shadow-xs"
           >
-            Concluído
+            Entendido
           </button>
         </div>
       </div>

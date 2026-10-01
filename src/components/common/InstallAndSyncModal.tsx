@@ -112,10 +112,10 @@ export const InstallAndSyncModal: React.FC<InstallAndSyncModalProps> = ({
   };
 
   const handleInstallAndroidClick = async () => {
-    if (isAndroid && isInstallable) {
+    if (isInstallable) {
       const res = await promptInstall();
       if (res === 'accepted') {
-        setSyncFeedback('Aplicação instalada com sucesso no Android!');
+        setSyncFeedback('Aplicação instalada com sucesso no dispositivo!');
         return;
       }
     }

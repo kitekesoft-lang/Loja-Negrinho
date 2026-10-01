@@ -16,6 +16,7 @@ import {
   Award,
   QrCode,
   LogOut,
+  KeyRound,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -42,6 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
   onReenableLogin,
 }) => {
   const tabs = [
+    { id: 'license', label: 'Módulo Licença (Admin A)', icon: KeyRound },
     { id: 'erp', label: 'Módulo ERP (Fase 4)', icon: Package },
     { id: 'verify', label: 'Portal Validação (QR)', icon: QrCode },
     { id: 'erp-tests', label: 'Testes ERP (Fase 4)', icon: Award },
