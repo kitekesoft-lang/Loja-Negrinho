@@ -33,7 +33,9 @@ export class AuthService {
         u.status === 'ACTIVE' &&
         (u.username?.toLowerCase() === cleanId ||
           u.email?.toLowerCase() === cleanId ||
-          u.id?.toLowerCase() === cleanId)
+          u.id?.toLowerCase() === cleanId ||
+          (cleanId === 'admin_a' && u.adminSubtype === 'ADMIN_A') ||
+          (cleanId === 'admin_b' && u.adminSubtype === 'ADMIN_B'))
     );
 
     if (!user) {

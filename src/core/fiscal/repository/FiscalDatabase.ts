@@ -24,6 +24,9 @@ import { PGC_ANGOLANO_CHART } from '../engines/AccountingEngine';
 import { LocalPersistenceEngine } from '../storage/LocalPersistenceEngine';
 import { LicenseInfo } from '../types/license';
 import { LicenseService } from '../security/LicenseService';
+import { RestaurantTable } from '../types/restaurant';
+import { ServiceOrder } from '../types/serviceOrder';
+import { Employee, PayrollRecord, calculateAngolanPayroll } from '../types/payroll';
 
 export class FiscalDatabase {
   private static instance: FiscalDatabase;
@@ -52,6 +55,12 @@ export class FiscalDatabase {
   public cashMovements: Map<string, CashMovement> = new Map();
   public bankAccounts: Map<string, BankAccount> = new Map();
   public journalEntries: Map<string, AccountingJournalEntry> = new Map();
+
+  // Módulos Especializados (Restauração, Ordens de Serviço, RH)
+  public tables: Map<string, RestaurantTable> = new Map();
+  public serviceOrders: Map<string, ServiceOrder> = new Map();
+  public employees: Map<string, Employee> = new Map();
+  public payrollRecords: Map<string, PayrollRecord> = new Map();
 
   // Listeners para actualizações reactivas na interface React
   private listeners: Array<() => void> = [];
@@ -107,7 +116,7 @@ export class FiscalDatabase {
       city: 'Luanda',
       province: 'Luanda',
       country: 'AO',
-      currency: 'Kz',
+      currency: 'AOA',
       taxRegime: 'GERAL',
       conservatoryRegistration: '1432-19/Luanda',
       capitalSocial: '5.000.000,00 Kz',
@@ -247,6 +256,10 @@ export class FiscalDatabase {
       },
     ];
     usersList.forEach((u) => this.users.set(u.id, u));
+    const defaultCaixa = this.users.get('USR-CAIXA-1') || this.users.get('USR-OPERADOR') || usersList[2];
+    if (defaultCaixa) {
+      this.users.set('USR-CAIXA', { ...defaultCaixa, id: 'USR-CAIXA' });
+    }
 
     // 4. Clientes (Exactos da imagem)
     const customersList: Customer[] = [
@@ -338,8 +351,42 @@ export class FiscalDatabase {
         status: 'ACTIVE',
         createdAt: now,
       },
+      {
+        id: 'CLI-SONANGOL',
+        companyId,
+        taxId: '5401142231',
+        name: 'Sonangol E.P. - Sociedade Nacional de Combustíveis',
+        customerType: 'EMPRESA_NACIONAL',
+        country: 'AO',
+        billingAddress: 'Rua Rainha Ginga, Luanda',
+        city: 'Luanda',
+        province: 'Luanda',
+        email: 'facturacao@sonangol.co.ao',
+        phone: '923 000 111',
+        status: 'ACTIVE',
+        createdAt: now,
+      },
+      {
+        id: 'CLI-BMA',
+        companyId,
+        taxId: '5403129845',
+        name: 'Banco Millennium Atlântico S.A.',
+        customerType: 'EMPRESA_NACIONAL',
+        country: 'AO',
+        billingAddress: 'Talatona, Luanda',
+        city: 'Luanda',
+        province: 'Luanda',
+        email: 'contabilidade@atlantico.ao',
+        phone: '923 111 222',
+        status: 'ACTIVE',
+        createdAt: now,
+      },
     ];
     customersList.forEach((c) => this.customers.set(c.id, c));
+    const defaultCustomer = this.customers.get('CLI-FINAL') || customersList[0];
+    if (defaultCustomer) {
+      this.customers.set('CLI-001', { ...defaultCustomer, id: 'CLI-001' });
+    }
 
     // 5. Fornecedores (Exactos da imagem)
     const suppliersList: Supplier[] = [
@@ -1616,6 +1663,412 @@ export class FiscalDatabase {
     ];
     initialPurchases.forEach((po) => this.purchaseOrders.set(po.id, po));
 
+    // ==========================================
+    // 10. MÓDULO RESTAURAÇÃO & MESAS
+    // ==========================================
+    const initialTables: RestaurantTable[] = [
+      {
+        id: 'TBL-01',
+        number: 1,
+        name: 'Mesa 01',
+        zone: 'SALAO_PRINCIPAL',
+        capacity: 4,
+        status: 'OCCUPIED',
+        waiterName: 'António Kiala',
+        customerName: 'Manuel Viana',
+        customerNif: '999999999',
+        openedAt: new Date(Date.now() - 35 * 60000).toISOString(),
+        items: [
+          {
+            id: 'ORD-ITM-1',
+            productId: 'PRD-CERVEJA-CUCA',
+            productName: 'Cerveja Cuca Lata 33cl',
+            quantity: 3,
+            unitPrice: 500,
+            total: 1500,
+            notes: 'Bem frescas',
+            status: 'SERVED',
+            addedAt: new Date(Date.now() - 30 * 60000).toISOString(),
+          },
+          {
+            id: 'ORD-ITM-2',
+            productId: 'PRD-REFEICAO-M01',
+            productName: 'Bitoque Especial com Batata',
+            quantity: 2,
+            unitPrice: 4500,
+            total: 9000,
+            notes: 'Ovo bem passado',
+            status: 'SERVED',
+            addedAt: new Date(Date.now() - 25 * 60000).toISOString(),
+          },
+        ],
+        subtotal: 10500,
+      },
+      {
+        id: 'TBL-02',
+        number: 2,
+        name: 'Mesa 02',
+        zone: 'SALAO_PRINCIPAL',
+        capacity: 2,
+        status: 'BILL_REQUESTED',
+        waiterName: 'António Kiala',
+        customerName: 'Carla Dias',
+        customerNif: '005423112LA01',
+        openedAt: new Date(Date.now() - 50 * 60000).toISOString(),
+        items: [
+          {
+            id: 'ORD-ITM-3',
+            productId: 'PRD-AGUA-CHELLA',
+            productName: 'Água Mineral Chela 500ml',
+            quantity: 2,
+            unitPrice: 350,
+            total: 700,
+            notes: 'Sem gelo',
+            status: 'SERVED',
+            addedAt: new Date(Date.now() - 45 * 60000).toISOString(),
+          },
+          {
+            id: 'ORD-ITM-4',
+            productId: 'PRD-CAFE-EXPRESSO',
+            productName: 'Café Expresso Ginga',
+            quantity: 2,
+            unitPrice: 400,
+            total: 800,
+            notes: '',
+            status: 'SERVED',
+            addedAt: new Date(Date.now() - 15 * 60000).toISOString(),
+          },
+        ],
+        subtotal: 1500,
+      },
+      {
+        id: 'TBL-03',
+        number: 3,
+        name: 'Mesa 03',
+        zone: 'SALAO_PRINCIPAL',
+        capacity: 4,
+        status: 'AVAILABLE',
+        items: [],
+        subtotal: 0,
+      },
+      {
+        id: 'TBL-04',
+        number: 4,
+        name: 'Mesa 04 (Janela)',
+        zone: 'SALAO_PRINCIPAL',
+        capacity: 6,
+        status: 'RESERVED',
+        customerName: 'Dra. Teresa Bento',
+        waiterName: 'António Kiala',
+        items: [],
+        subtotal: 0,
+      },
+      {
+        id: 'TBL-05',
+        number: 5,
+        name: 'Esplanada 01',
+        zone: 'ESPLANADA',
+        capacity: 4,
+        status: 'OCCUPIED',
+        waiterName: 'António Kiala',
+        customerName: 'Grupo Amigos',
+        openedAt: new Date(Date.now() - 20 * 60000).toISOString(),
+        items: [
+          {
+            id: 'ORD-ITM-5',
+            productId: 'PRD-CERVEJA-CUCA',
+            productName: 'Cerveja Cuca Lata 33cl',
+            quantity: 6,
+            unitPrice: 500,
+            total: 3000,
+            status: 'SENT_TO_KITCHEN',
+            addedAt: new Date(Date.now() - 10 * 60000).toISOString(),
+          },
+        ],
+        subtotal: 3000,
+      },
+      {
+        id: 'TBL-06',
+        number: 6,
+        name: 'Esplanada 02',
+        zone: 'ESPLANADA',
+        capacity: 4,
+        status: 'AVAILABLE',
+        items: [],
+        subtotal: 0,
+      },
+      {
+        id: 'TBL-07',
+        number: 7,
+        name: 'Camarote VIP 01',
+        zone: 'SALA_VIP',
+        capacity: 10,
+        status: 'AVAILABLE',
+        items: [],
+        subtotal: 0,
+      },
+      {
+        id: 'TBL-08',
+        number: 8,
+        name: 'Balcão Bar 01',
+        zone: 'BALCAO',
+        capacity: 2,
+        status: 'AVAILABLE',
+        items: [],
+        subtotal: 0,
+      },
+    ];
+    initialTables.forEach((t) => this.tables.set(t.id, t));
+
+    // ==========================================
+    // 11. MÓDULO ORDENS DE SERVIÇO (OFICINA & TI)
+    // ==========================================
+    const initialOrders: ServiceOrder[] = [
+      {
+        id: 'OS-001',
+        orderNumber: 'OS-2026/0001',
+        customerId: 'CLI-MARIA',
+        customerName: 'Maria Santos',
+        customerPhone: '923 456 789',
+        customerNif: '005423112LA01',
+        equipment: {
+          type: 'Computador Portátil',
+          brand: 'HP',
+          model: 'ProBook 450 G8',
+          serialNumber: '5CD12984XJ',
+          accessories: 'Carregador original + Bolsa preta',
+          reportedFault: 'Equipamento aquece excessivamente e desliga após 15 minutos de uso.',
+          technicalDiagnosis: 'Acúmulo de poeira nas ventoinhas e pasta térmica degradada. Recomendada substituição de pasta térmica e limpeza completa.',
+        },
+        status: 'IN_PROGRESS',
+        assignedTechnician: 'Bernardo Silva (Técnico TI)',
+        items: [
+          {
+            id: 'OS-ITM-1',
+            type: 'PART',
+            description: 'Pasta Térmica Arctic MX-4 4g',
+            quantity: 1,
+            unitPrice: 8500,
+            total: 8500,
+            taxRate: 14,
+          },
+          {
+            id: 'OS-ITM-2',
+            type: 'LABOR',
+            description: 'Manutenção Preventiva & Limpeza Ultrassónica de Dissipador',
+            quantity: 1,
+            unitPrice: 25000,
+            total: 25000,
+            taxRate: 14,
+          },
+        ],
+        partsSubtotal: 8500,
+        laborSubtotal: 25000,
+        totalAmount: 33500,
+        estimatedDeliveryDate: '2026-10-05',
+        warrantyPeriodDays: 90,
+        createdAt: new Date(Date.now() - 48 * 3600000).toISOString(),
+        updatedAt: now,
+      },
+      {
+        id: 'OS-002',
+        orderNumber: 'OS-2026/0002',
+        customerId: 'CLI-SONANGOL',
+        customerName: 'Sonangol E.P.',
+        customerPhone: '923 000 111',
+        customerNif: '5401142231',
+        equipment: {
+          type: 'Impressora Fiscal Térmica',
+          brand: 'Epson',
+          model: 'TM-T20III',
+          serialNumber: 'EPS-884219',
+          accessories: 'Cabo USB + Fonte 24V',
+          reportedFault: 'Encravamento de papel no guilhotina e corte irregular de talões.',
+          technicalDiagnosis: 'Lâmina de corte desgastada. Substituição da guilhotina automática.',
+        },
+        status: 'READY',
+        assignedTechnician: 'Bernardo Silva (Técnico TI)',
+        items: [
+          {
+            id: 'OS-ITM-3',
+            type: 'PART',
+            description: 'Mecanismo de Guilhotina Epson TM Series',
+            quantity: 1,
+            unitPrice: 38000,
+            total: 38000,
+            taxRate: 14,
+          },
+          {
+            id: 'OS-ITM-4',
+            type: 'LABOR',
+            description: 'Mão-de-Obra de Substituição e Calibração de Sensores',
+            quantity: 1,
+            unitPrice: 20000,
+            total: 20000,
+            taxRate: 14,
+          },
+        ],
+        partsSubtotal: 38000,
+        laborSubtotal: 20000,
+        totalAmount: 58000,
+        estimatedDeliveryDate: '2026-10-03',
+        warrantyPeriodDays: 180,
+        createdAt: new Date(Date.now() - 72 * 3600000).toISOString(),
+        updatedAt: now,
+      },
+      {
+        id: 'OS-003',
+        orderNumber: 'OS-2026/0003',
+        customerId: 'CLI-JOAO',
+        customerName: 'João Ferreira',
+        customerPhone: '924 567 890',
+        customerNif: '006734221LA02',
+        equipment: {
+          type: 'Smartphone',
+          brand: 'Apple',
+          model: 'iPhone 13 Pro',
+          serialNumber: 'F17FK98LP0',
+          accessories: 'Capa transparente',
+          reportedFault: 'Ecrã partido após queda acidental.',
+        },
+        status: 'AWAITING_APPROVAL',
+        assignedTechnician: 'Bernardo Silva (Técnico TI)',
+        items: [
+          {
+            id: 'OS-ITM-5',
+            type: 'PART',
+            description: 'Módulo de Ecrã Super Retina OLED Original',
+            quantity: 1,
+            unitPrice: 165000,
+            total: 165000,
+            taxRate: 14,
+          },
+          {
+            id: 'OS-ITM-6',
+            type: 'LABOR',
+            description: 'Montagem e Reprogramação TrueTone',
+            quantity: 1,
+            unitPrice: 30000,
+            total: 30000,
+            taxRate: 14,
+          },
+        ],
+        partsSubtotal: 165000,
+        laborSubtotal: 30000,
+        totalAmount: 195000,
+        warrantyPeriodDays: 90,
+        createdAt: new Date(Date.now() - 12 * 3600000).toISOString(),
+        updatedAt: now,
+      },
+    ];
+    initialOrders.forEach((o) => this.serviceOrders.set(o.id, o));
+
+    // ==========================================
+    // 12. MÓDULO RECURSOS HUMANOS & SALÁRIOS ANGOLA
+    // ==========================================
+    const initialEmployees: Employee[] = [
+      {
+        id: 'EMP-001',
+        name: 'Manuel dos Santos',
+        nif: '001245678LA034',
+        position: 'Gerente Geral de Loja',
+        department: 'Administração & Direção',
+        admissionDate: '2022-01-15',
+        iban: 'AO06.0006.0000.1111.2222.3333.4',
+        bankName: 'BFA',
+        baseSalary: 450000,
+        mealAllowance: 30000,
+        transportAllowance: 30000,
+        otherAllowances: 25000,
+        status: 'ACTIVE',
+      },
+      {
+        id: 'EMP-002',
+        name: 'Bernardo Silva',
+        nif: '004567891LA012',
+        position: 'Técnico Sénior de Hardware & TI',
+        department: 'Assistência Técnica & Oficina',
+        admissionDate: '2023-03-01',
+        iban: 'AO06.0040.0000.5555.6666.7777.8',
+        bankName: 'BAI',
+        baseSalary: 280000,
+        mealAllowance: 30000,
+        transportAllowance: 30000,
+        otherAllowances: 15000,
+        status: 'ACTIVE',
+      },
+      {
+        id: 'EMP-003',
+        name: 'Beatriz Costa',
+        nif: '007891234LA045',
+        position: 'Operadora de Caixa Principal',
+        department: 'Frente de Loja & POS',
+        admissionDate: '2024-02-10',
+        iban: 'AO06.0051.0000.8888.9999.0000.1',
+        bankName: 'Banco BIC',
+        baseSalary: 140000,
+        mealAllowance: 30000,
+        transportAllowance: 30000,
+        otherAllowances: 10000,
+        status: 'ACTIVE',
+      },
+      {
+        id: 'EMP-004',
+        name: 'António Kiala',
+        nif: '009876543LA078',
+        position: 'Empregado de Mesa & Atendimento',
+        department: 'Restauração & Bar',
+        admissionDate: '2024-05-20',
+        iban: 'AO06.0055.0000.2222.3333.4444.5',
+        bankName: 'Banco Sol',
+        baseSalary: 110000,
+        mealAllowance: 30000,
+        transportAllowance: 30000,
+        otherAllowances: 0,
+        status: 'ACTIVE',
+      },
+    ];
+    initialEmployees.forEach((e) => this.employees.set(e.id, e));
+
+    // Processamento Salarial Inicial (Mês Atual)
+    initialEmployees.forEach((emp, index) => {
+      const calc = calculateAngolanPayroll(
+        emp.baseSalary,
+        emp.mealAllowance,
+        emp.transportAllowance,
+        emp.otherAllowances,
+        0
+      );
+
+      const record: PayrollRecord = {
+        id: `PAY-2026-10-${emp.id}`,
+        periodMonth: 10,
+        periodYear: 2026,
+        employeeId: emp.id,
+        employeeName: emp.name,
+        employeeNif: emp.nif,
+        position: emp.position,
+        department: emp.department,
+        iban: emp.iban,
+        baseSalary: emp.baseSalary,
+        mealAllowance: emp.mealAllowance,
+        transportAllowance: emp.transportAllowance,
+        otherAllowances: emp.otherAllowances,
+        overtimeAmount: 0,
+        grossSalary: calc.grossSalary,
+        taxableIncome: calc.taxableIncome,
+        inssEmployee: calc.inssEmployee,
+        inssEmployer: calc.inssEmployer,
+        irtAmount: calc.irtAmount,
+        totalDeductions: calc.totalDeductions,
+        netSalary: calc.netSalary,
+        paymentStatus: 'PAID',
+        processedAt: now,
+        receiptNumber: `REC-SAL-2026/10-00${index + 1}`,
+      };
+      this.payrollRecords.set(record.id, record);
+    });
+
     // Log inicial de sistema
     AuditService.logEvent({
       companyId,
@@ -1646,5 +2099,32 @@ export class FiscalDatabase {
   // Obter pagamentos efectuados de um documento
   getPaymentsForDocument(documentId: string): Payment[] {
     return Array.from(this.payments.values()).filter((p) => p.documentId === documentId);
+  }
+
+  // --- Módulo Restauração & Mesas ---
+  public updateTable(table: RestaurantTable): void {
+    this.tables.set(table.id, table);
+    LocalPersistenceEngine.persistToLocalStorage(this);
+    this.notify();
+  }
+
+  // --- Módulo Ordens de Serviço ---
+  public updateServiceOrder(so: ServiceOrder): void {
+    this.serviceOrders.set(so.id, so);
+    LocalPersistenceEngine.persistToLocalStorage(this);
+    this.notify();
+  }
+
+  // --- Módulo Recursos Humanos & Salários ---
+  public updateEmployee(emp: Employee): void {
+    this.employees.set(emp.id, emp);
+    LocalPersistenceEngine.persistToLocalStorage(this);
+    this.notify();
+  }
+
+  public addPayrollRecord(record: PayrollRecord): void {
+    this.payrollRecords.set(record.id, record);
+    LocalPersistenceEngine.persistToLocalStorage(this);
+    this.notify();
   }
 }

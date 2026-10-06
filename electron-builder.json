@@ -1,0 +1,45 @@
+{
+  "appId": "ao.kitekesoft.kitekepro",
+  "productName": "Kiteke Pro",
+  "copyright": "Copyright © 2026 KitekeSoft — Todos os direitos reservados",
+  "directories": {
+    "output": "release",
+    "buildResources": "electron/assets"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "package.json"
+  ],
+  "extraMetadata": {
+    "main": "electron/main/main.cjs"
+  },
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64", "ia32"]
+      },
+      {
+        "target": "portable",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "electron/assets/icon.png",
+    "legalTrademarks": "KitekeSoft",
+    "requestedExecutionLevel": "asInvoker"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "perMachine": false,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Kiteke Pro",
+    "uninstallDisplayName": "Kiteke Pro — Sistema de Gestão Empresarial",
+    "artifactName": "Kiteke-Pro-Setup-${arch}.exe"
+  },
+  "portable": {
+    "artifactName": "Kiteke-Pro-Portable-${arch}.exe"
+  }
+}

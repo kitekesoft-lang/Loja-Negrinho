@@ -11,6 +11,7 @@ import { AuthService } from '../security/AuthService';
 import { NifValidator } from '../security/NifValidator';
 import { RbacService } from '../security/RbacService';
 import { AuditService } from '../security/AuditService';
+import { LicenseService } from '../security/LicenseService';
 import { TaxConfiguration } from '../types/tax';
 import { DocumentSeries } from '../types/series';
 import { User, canAccessAdminLayout } from '../types/user';
@@ -1109,10 +1110,6 @@ export class FiscalTestSuite {
     assertions.push('Sessão subsequente concede acesso direto aos módulos com nova credencial.');
 
     // 9. Validação do Módulo de Licença: Exclusivo ao Administrador A
-    const { LicenseService } = await import('../security/LicenseService');
-    const { FiscalDatabase } = await import('../repository/FiscalDatabase');
-    const db = FiscalDatabase.getInstance();
-
     if (!LicenseService.canManageLicense(adminA)) {
       throw new Error('Administrador A deve ter permissão exclusiva para gerir licenças');
     }

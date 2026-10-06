@@ -11,6 +11,10 @@ import { OperatorReportsView } from './OperatorReportsView';
 import { OperatorUsersView } from './OperatorUsersView';
 import { OperatorSettingsView } from './OperatorSettingsView';
 import { OperatorCashView } from './OperatorCashView';
+import { OperatorRestaurantView } from './OperatorRestaurantView';
+import { OperatorServiceOrdersView } from './OperatorServiceOrdersView';
+import { OperatorPayrollView } from './OperatorPayrollView';
+import { OperatorSaftImporterView } from './OperatorSaftImporterView';
 import { PublicInvoiceVerificationView } from '../fiscal/PublicInvoiceVerificationView';
 import { LicenseManagerView } from '../admin/LicenseManagerView';
 import { InstallAndSyncModal } from '../common/InstallAndSyncModal';
@@ -31,6 +35,10 @@ import {
   UserCheck,
   Settings,
   KeyRound,
+  UtensilsCrossed,
+  Wrench,
+  WalletCards,
+  FileUp,
   Search,
   Bell,
   ChevronDown,
@@ -94,15 +102,19 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
   const currentLicense = db.getLicense();
   const licenseDaysLeft = LicenseService.getDaysRemaining(currentLicense.expirationDate);
 
-  // 10 Módulos fiéis ao layout de referência + Licenciamento (exclusivo Administrador A)
+  // Módulos do Sistema ERP & POS (incluindo Restauração, OS, RH e Importador SAF-T)
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'vendas', label: 'Vendas', icon: ShoppingCart },
+    { id: 'vendas', label: 'Vendas (POS)', icon: ShoppingCart },
+    { id: 'restaurante', label: 'Restauração & Mesas', icon: UtensilsCrossed },
+    { id: 'os', label: 'Ordens de Serviço', icon: Wrench },
     { id: 'produtos', label: 'Produtos', icon: Package },
     { id: 'stock', label: 'Stock', icon: Boxes },
     { id: 'clientes', label: 'Clientes', icon: Users },
     { id: 'fornecedores', label: 'Fornecedores', icon: Truck },
     { id: 'compras', label: 'Compras', icon: ShoppingBag },
+    { id: 'salarios', label: 'RH & Salários', icon: WalletCards },
+    { id: 'saft-import', label: 'Importar SAF-T', icon: FileUp },
     { id: 'relatorios', label: 'Relatórios', icon: BarChart3 },
     { id: 'utilizadores', label: 'Utilizadores', icon: UserCheck },
     { id: 'definicoes', label: 'Configurações', icon: Settings },
@@ -119,7 +131,7 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
         className="w-[64px] max-w-[5cm] bg-[#061224] text-white flex flex-col items-center justify-between shrink-0 shadow-2xl select-none z-30 py-3 relative border-r border-sky-950/70 overflow-visible"
       >
         {/* Navegação Vertical de Módulos (Ícones Alinhados ao Centro) */}
-        <div className="w-full flex flex-col items-center space-y-2 overflow-visible">
+        <div className="w-full flex-1 flex flex-col items-center space-y-1.5 overflow-y-auto overflow-x-visible no-scrollbar py-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeNav === item.id;
@@ -553,11 +565,20 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
               />
             )}
             {activeNav === 'vendas' && <QuickPOSView currentUser={currentUser} />}
+            {activeNav === 'restaurante' && (
+              <OperatorRestaurantView
+                currentUser={currentUser}
+                onNavigateToPOS={() => setActiveNav('vendas')}
+              />
+            )}
+            {activeNav === 'os' && <OperatorServiceOrdersView currentUser={currentUser} />}
             {activeNav === 'produtos' && <OperatorProductsView currentUser={currentUser} />}
             {activeNav === 'stock' && <OperatorStockView currentUser={currentUser} />}
             {activeNav === 'clientes' && <OperatorCustomersView currentUser={currentUser} />}
             {activeNav === 'fornecedores' && <OperatorSuppliersView currentUser={currentUser} />}
             {activeNav === 'compras' && <OperatorPurchasesView currentUser={currentUser} />}
+            {activeNav === 'salarios' && <OperatorPayrollView currentUser={currentUser} />}
+            {activeNav === 'saft-import' && <OperatorSaftImporterView currentUser={currentUser} />}
             {activeNav === 'relatorios' && <OperatorReportsView currentUser={currentUser} />}
             {activeNav === 'utilizadores' && (
               <OperatorUsersView currentUser={currentUser} onSwitchUser={onSwitchUser} />

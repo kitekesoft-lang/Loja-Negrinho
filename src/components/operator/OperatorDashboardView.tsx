@@ -9,6 +9,11 @@ import {
   TrendingUp,
   AlertCircle,
   ShoppingCart,
+  UtensilsCrossed,
+  Wrench,
+  WalletCards,
+  FileUp,
+  ChevronRight,
 } from 'lucide-react';
 
 interface OperatorDashboardViewProps {
@@ -274,7 +279,114 @@ export const OperatorDashboardView: React.FC<OperatorDashboardViewProps> = ({
         </div>
       </div>
 
-      {/* 4. Banner Inferior de Produtos com Estoque Baixo */}
+      {/* 4. Módulos Avançados & Expansão de Negócio (Restauração, OS, RH e SAF-T) */}
+      <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-slate-800 tracking-tight flex items-center gap-2">
+              Módulos Especializados Integrados
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-800">
+                Paridade Total Trunfo & ERP
+              </span>
+            </h2>
+            <p className="text-xs text-slate-400">
+              Expansões de retalho, assistência técnica, restauração e gestão de colaboradores
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          <button
+            type="button"
+            onClick={() => onNavigateTab?.('restaurante')}
+            className="p-4 rounded-xl border border-amber-200 bg-amber-50/20 hover:bg-amber-50/50 hover:border-amber-400 transition-all text-left cursor-pointer group flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
+                <UtensilsCrossed className="w-4 h-4" />
+              </div>
+              <h3 className="font-bold text-xs text-slate-900 group-hover:text-amber-800">
+                Restauração & Mesas
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Planta de mesas, comandas de cozinha e fecho fiscal
+              </p>
+            </div>
+            <div className="mt-3 flex items-center text-[10px] font-bold text-amber-700">
+              <span>Abrir Sala & Mesas</span>
+              <ChevronRight className="w-3 h-3 ml-1 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onNavigateTab?.('os')}
+            className="p-4 rounded-xl border border-blue-200 bg-blue-50/20 hover:bg-blue-50/50 hover:border-blue-400 transition-all text-left cursor-pointer group flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
+                <Wrench className="w-4 h-4" />
+              </div>
+              <h3 className="font-bold text-xs text-slate-900 group-hover:text-blue-800">
+                Ordens de Serviço
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Oficinas e assistência técnica com conversão direta em FT/FR
+              </p>
+            </div>
+            <div className="mt-3 flex items-center text-[10px] font-bold text-blue-700">
+              <span>Gerir Fichas de Reparação</span>
+              <ChevronRight className="w-3 h-3 ml-1 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onNavigateTab?.('salarios')}
+            className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/20 hover:bg-indigo-50/50 hover:border-indigo-400 transition-all text-left cursor-pointer group flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
+                <WalletCards className="w-4 h-4" />
+              </div>
+              <h3 className="font-bold text-xs text-slate-900 group-hover:text-indigo-800">
+                RH & Salários Angola
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Cálculo de IRT (Lei 28/20), INSS 3%/8% e recibos oficiais
+              </p>
+            </div>
+            <div className="mt-3 flex items-center text-[10px] font-bold text-indigo-700">
+              <span>Folha Salarial</span>
+              <ChevronRight className="w-3 h-3 ml-1 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onNavigateTab?.('saft-import')}
+            className="p-4 rounded-xl border border-purple-200 bg-purple-50/20 hover:bg-purple-50/50 hover:border-purple-400 transition-all text-left cursor-pointer group flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
+                <FileUp className="w-4 h-4" />
+              </div>
+              <h3 className="font-bold text-xs text-slate-900 group-hover:text-purple-800">
+                Importar SAF-T (AO)
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Migração instantânea a partir da Trunfo Software e outros
+              </p>
+            </div>
+            <div className="mt-3 flex items-center text-[10px] font-bold text-purple-700">
+              <span>Migrar Dados XML</span>
+              <ChevronRight className="w-3 h-3 ml-1 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* 5. Banner Inferior de Produtos com Estoque Baixo */}
       <div className="bg-[#fef2f2] border border-[#fecaca] rounded-2xl p-3.5 flex items-center gap-3 text-xs shadow-2xs">
         <div className="w-7 h-7 rounded-full bg-[#ef4444] text-white flex items-center justify-center shrink-0 font-bold">
           !

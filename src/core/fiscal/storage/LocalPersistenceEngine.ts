@@ -5,6 +5,9 @@ import { FiscalDocument } from '../types/document';
 import { StockItem, StockMovement } from '../types/erp';
 import { Payment } from '../types/payment';
 import { LicenseInfo } from '../types/license';
+import { RestaurantTable } from '../types/restaurant';
+import { ServiceOrder } from '../types/serviceOrder';
+import { Employee, PayrollRecord } from '../types/payroll';
 
 export interface SyncQueueItem {
   id: string;
@@ -35,6 +38,10 @@ const STORAGE_KEYS = {
   CLOUD_CONFIG: 'minha_loja_cloud_config_v1',
   BACKUP_TIMESTAMP: 'minha_loja_last_backup_v1',
   LICENSE: 'minha_loja_license_v1',
+  TABLES: 'minha_loja_tables_v1',
+  SERVICE_ORDERS: 'minha_loja_service_orders_v1',
+  EMPLOYEES: 'minha_loja_employees_v1',
+  PAYROLL: 'minha_loja_payroll_v1',
 };
 
 export class LocalPersistenceEngine {
@@ -156,6 +163,34 @@ export class LocalPersistenceEngine {
         const pmtsArray: Payment[] = JSON.parse(rawPmts);
         pmtsArray.forEach((p) => db.payments.set(p.id, p));
       }
+
+      // 8. Mesas de Restauração
+      const rawTables = localStorage.getItem(STORAGE_KEYS.TABLES);
+      if (rawTables) {
+        const tablesArray: RestaurantTable[] = JSON.parse(rawTables);
+        tablesArray.forEach((t) => db.tables.set(t.id, t));
+      }
+
+      // 9. Ordens de Serviço
+      const rawSO = localStorage.getItem(STORAGE_KEYS.SERVICE_ORDERS);
+      if (rawSO) {
+        const soArray: ServiceOrder[] = JSON.parse(rawSO);
+        soArray.forEach((o) => db.serviceOrders.set(o.id, o));
+      }
+
+      // 10. Funcionários & RH
+      const rawEmp = localStorage.getItem(STORAGE_KEYS.EMPLOYEES);
+      if (rawEmp) {
+        const empArray: Employee[] = JSON.parse(rawEmp);
+        empArray.forEach((e) => db.employees.set(e.id, e));
+      }
+
+      // 11. Recibos de Salário
+      const rawPay = localStorage.getItem(STORAGE_KEYS.PAYROLL);
+      if (rawPay) {
+        const payArray: PayrollRecord[] = JSON.parse(rawPay);
+        payArray.forEach((r) => db.payrollRecords.set(r.id, r));
+      }
     } catch (e) {
       console.warn('Aviso na hidratação de armazenamento local:', e);
     }
@@ -178,6 +213,10 @@ export class LocalPersistenceEngine {
       localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(Array.from(db.customers.values())));
       localStorage.setItem(STORAGE_KEYS.SUPPLIERS, JSON.stringify(Array.from(db.suppliers.values())));
       localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(Array.from(db.payments.values())));
+      localStorage.setItem(STORAGE_KEYS.TABLES, JSON.stringify(Array.from(db.tables.values())));
+      localStorage.setItem(STORAGE_KEYS.SERVICE_ORDERS, JSON.stringify(Array.from(db.serviceOrders.values())));
+      localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(Array.from(db.employees.values())));
+      localStorage.setItem(STORAGE_KEYS.PAYROLL, JSON.stringify(Array.from(db.payrollRecords.values())));
       localStorage.setItem(STORAGE_KEYS.BACKUP_TIMESTAMP, new Date().toISOString());
     } catch (err) {
       console.error('Erro ao persistir no armazenamento local:', err);
