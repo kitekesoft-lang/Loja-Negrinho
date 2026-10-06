@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <script type="module" src="/@vite/client"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Loja Negrinho - Mini Mercado &amp; Caixa POS Fiscal</title>
+    <meta name="description" content="Sistema de ponto de venda (POS) e gestão comercial para mini mercado em conformidade com as regras da AGT e SAF-T(AO)." />
+    <meta property="og:title" content="Loja Negrinho - Mini Mercado &amp; Caixa POS Fiscal" />
+    <meta property="og:description" content="Sistema de ponto de venda (POS) e gestão comercial para mini mercado em conformidade com as regras da AGT e SAF-T(AO)." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- PWA & Mobile Web App Meta Tags -->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#061224" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Minha Loja" />
+    <meta name="format-detection" content="telephone=no" />
+    <script>
+      // Captura antecipada do evento de instalação antes do React carregar
+      window.__deferredPrompt = null;
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window.__deferredPrompt = e;
+        window.dispatchEvent(new CustomEvent('pwa-prompt-ready'));
+      });
+
+      // No ambiente de desenvolvimento (ais-dev / localhost / iframe), desregistamos qualquer SW prévio
+      // para evitar loops de recarregamento e interferência no iframe de pré-visualização.
+      var isDevEnv = location.hostname.includes('ais-dev-') || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      if ('serviceWorker' in navigator) {
+        if (isDevEnv) {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for (var i = 0; i < registrations.length; i++) {
+              registrations[i].unregister();
+            }
+          });
+        } else {
+          window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js').then(function(reg) {
+              console.log('PWA ServiceWorker ativo:', reg.scope);
+            }).catch(function(err) {
+              console.log('Falha no registo do ServiceWorker:', err);
+            });
+          });
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

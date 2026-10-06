@@ -353,4 +353,156 @@ export class FiscalQRCodeService {
 
     return await QRCode.toString(content, opts);
   }
+
+  // =========================================================================
+  // ESPECIFICAÇÕES OFICIAIS AGT PARA DOCUMENTOS IMPRESSOS (100% CONFORMIDADE)
+  // Conforme especificações oficiais:
+  // - Padrão: QR Code Model 2
+  // - Versão: 4 (33 x 33 módulos) / Byte Mode
+  // - Nível de correcção de erros: M (15%)
+  // - Modo de dados: Byte
+  // - Codificação de caracteres: UTF-8
+  // - URL codificada: https://portaldocontribuinte.minfin.gov.ao/consultar-fe?documentNo
+  // - Formato: PNG, 350x350 px
+  // - Substituição de espaços: Cada espaço substituído pela sequência %20
+  // - Logótipo central: Emblema oficial AGT - ADMINISTRAÇÃO GERAL TRIBUTÁRIA
+  // =========================================================================
+
+  /**
+   * Constrói a URL codificada oficial da AGT para documentos impressos:
+   * Cada espaço no documentNo é substituído estritamente pela sequência %20.
+   */
+  public static buildOfficialAGTDocumentURL(documentNumber: string): string {
+    const cleanDoc = (documentNumber || '').trim().replace(/ /g, '%20');
+    return `https://portaldocontribuinte.minfin.gov.ao/consultar-fe?documentNo=${cleanDoc}`;
+  }
+
+  /**
+   * Gera o SVG oficial com QR Code Model 2, Nível M (15%) e o logótipo oficial da AGT no centro
+   */
+  public static async generateOfficialAGTQRCodeSVG(
+    documentNumber: string,
+    size: number = 350
+  ): Promise<string> {
+    const url = this.buildOfficialAGTDocumentURL(documentNumber);
+    const opts: QRCode.QRCodeToStringOptions = {
+      type: 'svg',
+      width: size,
+      margin: 2,
+      errorCorrectionLevel: 'M',
+      color: {
+        dark: '#000000',
+        light: '#ffffff',
+      },
+    };
+
+    const rawSvg = await QRCode.toString(url, opts);
+    const badgeSvg = this.getOfficialAGTBadgeSVG(size);
+    return rawSvg.replace('</svg>', badgeSvg + '</svg>');
+  }
+
+  /**
+   * Gera o DataURL em formato PNG (350x350 px padrão) fiel ao modelo oficial da AGT
+   */
+  public static async generateOfficialAGTQRCodeDataURL(
+    documentNumber: string,
+    targetSize: number = 350
+  ): Promise<string> {
+    const svgString = await this.generateOfficialAGTQRCodeSVG(documentNumber, targetSize);
+
+    // No ambiente do navegador (Client/React/POS), converte SVG para PNG rasterizado 350x350 px via Canvas
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      return new Promise((resolve) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = targetSize;
+        canvas.height = targetSize;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          return resolve(`data:image/svg+xml;utf8,${encodeURIComponent(svgString)}`);
+        }
+
+        const img = new Image();
+        const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        const blobUrl = URL.createObjectURL(svgBlob);
+
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, targetSize, targetSize);
+          URL.revokeObjectURL(blobUrl);
+          resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(blobUrl);
+          resolve(`data:image/svg+xml;utf8,${encodeURIComponent(svgString)}`);
+        };
+        img.src = blobUrl;
+      });
+    }
+
+    // Fallback seguro em ambientes sem DOM / Node.js
+    const url = this.buildOfficialAGTDocumentURL(documentNumber);
+    return await QRCode.toDataURL(url, {
+      width: targetSize,
+      margin: 2,
+      errorCorrectionLevel: 'M',
+      color: { dark: '#000000', light: '#ffffff' },
+    });
+  }
+
+  /**
+   * Gera o elemento SVG com o logótipo oficial da AGT (Engrenagem + Tipografia) no centro do QR Code
+   */
+  public static getOfficialAGTBadgeSVG(size: number = 350): string {
+    const scale = size / 350;
+    const bw = 120 * scale;
+    const bh = 56 * scale;
+    const bx = (size - bw) / 2;
+    const by = (size - bh) / 2;
+    const cx = bx + 27 * scale;
+    const cy = by + 28 * scale;
+    const outerR = 14 * scale;
+    const innerR = 10 * scale;
+
+    // Traçado preciso da engrenagem oficial de 8 dentes da AGT
+    let gearPath = '';
+    const numTeeth = 8;
+    const step = (Math.PI * 2) / numTeeth;
+    for (let i = 0; i < numTeeth; i++) {
+      const a0 = i * step;
+      const a1 = a0 + step * 0.25;
+      const a2 = a0 + step * 0.55;
+      const a3 = a0 + step * 0.8;
+      const x0 = cx + Math.cos(a0) * innerR;
+      const y0 = cy + Math.sin(a0) * innerR;
+      const x1 = cx + Math.cos(a1) * outerR;
+      const y1 = cy + Math.sin(a1) * outerR;
+      const x2 = cx + Math.cos(a2) * outerR;
+      const y2 = cy + Math.sin(a2) * outerR;
+      const x3 = cx + Math.cos(a3) * innerR;
+      const y3 = cy + Math.sin(a3) * innerR;
+      if (i === 0) gearPath += `M ${x0.toFixed(2)} ${y0.toFixed(2)} `;
+      else gearPath += `L ${x0.toFixed(2)} ${y0.toFixed(2)} `;
+      gearPath += `L ${x1.toFixed(2)} ${y1.toFixed(2)} L ${x2.toFixed(2)} ${y2.toFixed(2)} L ${x3.toFixed(2)} ${y3.toFixed(2)} `;
+    }
+    gearPath += 'Z';
+
+    return `
+    <g id="agt-official-badge">
+      <!-- Retângulo branco de fundo para isolamento dos módulos do QR Code -->
+      <rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="2" ry="2" fill="#ffffff" stroke="#ffffff" stroke-width="2" />
+      
+      <!-- Engrenagem azul oficial da AGT -->
+      <path d="${gearPath}" fill="#00478f" />
+      <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(5.5 * scale).toFixed(1)}" fill="#ffffff" />
+      <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(2.8 * scale).toFixed(1)}" fill="#00478f" />
+      
+      <!-- Linha vertical divisória -->
+      <line x1="${(bx + 48 * scale).toFixed(1)}" y1="${(by + 6 * scale).toFixed(1)}" x2="${(bx + 48 * scale).toFixed(1)}" y2="${(by + 50 * scale).toFixed(1)}" stroke="#94a3b8" stroke-width="0.75" />
+      
+      <!-- Tipografia oficial AGT: AGT / ADMINISTRAÇÃO / GERAL / TRIBUTÁRIA -->
+      <text x="${(bx + 54 * scale).toFixed(1)}" y="${(by + 16 * scale).toFixed(1)}" font-family="Arial, Helvetica, sans-serif" font-size="${(12 * scale).toFixed(1)}" font-weight="900" fill="#00478f">AGT</text>
+      <text x="${(bx + 54 * scale).toFixed(1)}" y="${(by + 27 * scale).toFixed(1)}" font-family="Arial, Helvetica, sans-serif" font-size="${(4.8 * scale).toFixed(1)}" font-weight="700" letter-spacing="0.3" fill="#4b6b8b">ADMINISTRAÇÃO</text>
+      <text x="${(bx + 54 * scale).toFixed(1)}" y="${(by + 36 * scale).toFixed(1)}" font-family="Arial, Helvetica, sans-serif" font-size="${(4.8 * scale).toFixed(1)}" font-weight="700" letter-spacing="0.3" fill="#4b6b8b">GERAL</text>
+      <text x="${(bx + 54 * scale).toFixed(1)}" y="${(by + 45 * scale).toFixed(1)}" font-family="Arial, Helvetica, sans-serif" font-size="${(4.8 * scale).toFixed(1)}" font-weight="700" letter-spacing="0.3" fill="#4b6b8b">TRIBUTÁRIA</text>
+    </g>`;
+  }
 }

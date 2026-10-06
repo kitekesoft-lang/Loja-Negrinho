@@ -246,13 +246,23 @@ export const InstallAndSyncModal: React.FC<InstallAndSyncModalProps> = ({
                 </div>
 
                 <div className="space-y-2 pt-2 border-t border-slate-200">
+                  <a
+                    href="/downloads/Kiteke-Pro-Portable-x64.zip"
+                    download="Kiteke-Pro-Portable-x64.zip"
+                    className="w-full py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs text-xs"
+                    title="Descarregar pacote portátil com Kiteke Pro.exe nativo para Windows 7, 8, 8.1, 10 e 11"
+                  >
+                    <Download className="w-4 h-4 text-amber-400" />
+                    <span>Descarregar Executável Windows (Kiteke Pro.exe)</span>
+                  </a>
+
                   <button
                     type="button"
                     onClick={promptInstall}
-                    className="w-full py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
+                    className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs text-xs"
                   >
-                    <Download className="w-4 h-4" />
-                    <span>Instalar no Windows (1-Clique)</span>
+                    <Monitor className="w-4 h-4" />
+                    <span>Instalar Aplicação PWA no Windows (1-Clique)</span>
                   </button>
 
                   <div className="flex gap-2">

@@ -1,4 +1,4 @@
-ia32:
+x64:
   firstOrDefaultFilePatterns:
     - '!**/node_modules'
     - '!electron/assets{,/**/*}'

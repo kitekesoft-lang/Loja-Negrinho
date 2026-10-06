@@ -22,9 +22,6 @@ import {
   Zap,
   Layers,
   X,
-  Coins,
-  Banknote,
-  Calculator,
 } from 'lucide-react';
 
 interface QuickPOSViewProps {
@@ -98,7 +95,6 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [tempDiscount, setTempDiscount] = useState<number>(0);
-  const [amountReceivedInput, setAmountReceivedInput] = useState<string>('');
 
   // Estados fiscais
   const [isProcessing, setIsProcessing] = useState(false);
@@ -195,7 +191,6 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
     if (cart.length > 0) {
       setCart([]);
       setDiscountAmount(0);
-      setAmountReceivedInput('');
       searchInputRef.current?.focus();
       setScanAlert({ message: 'Carrinho de compras esvaziado.', type: 'success' });
       setTimeout(() => setScanAlert(null), 3000);
@@ -379,46 +374,11 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
   const totalItemsCount = cart.reduce((acc, item) => acc + item.quantity, 0);
   const total = Math.max(0, subtotal - discountAmount);
 
-  // Cálculo de Troco (Dinheiro vs Eletrónico)
-  const isCashPayment = paymentMethod === 'DINHEIRO';
-  const numericReceived = parseFloat(amountReceivedInput.replace(/[^\d.]/g, '')) || 0;
-  const changeAmount = isCashPayment && numericReceived > total ? numericReceived - total : 0;
-  const missingAmount = isCashPayment && numericReceived > 0 && numericReceived < total ? total - numericReceived : 0;
-
-  // Ações de Troco e Notas
-  const handleSetExactAmount = () => {
-    setAmountReceivedInput(String(total));
-  };
-
-  const handleAddBanknote = (value: number) => {
-    const current = parseFloat(amountReceivedInput.replace(/[^\d.]/g, '')) || 0;
-    const nextVal = current + value;
-    setAmountReceivedInput(String(nextVal));
-  };
-
-  const handleSetDirectBanknote = (value: number) => {
-    setAmountReceivedInput(String(value));
-  };
-
-  const handleClearReceivedAmount = () => {
-    setAmountReceivedInput('');
-  };
-
   // Finalizar Venda Fiscal (AGT / RSA-2048 / FR)
   const handleFinalizeSale = () => {
     if (cart.length === 0) {
       setScanAlert({ message: 'O carrinho está vazio. Adicione artigos antes de finalizar a venda.', type: 'error' });
       setTimeout(() => setScanAlert(null), 3500);
-      return;
-    }
-
-    // Se pagar em dinheiro e o valor for insuficiente
-    if (isCashPayment && numericReceived > 0 && numericReceived < total) {
-      setScanAlert({
-        message: `Valor entregue (${numericReceived.toLocaleString('pt-AO')} Kz) insuficiente. Faltam ${missingAmount.toLocaleString('pt-AO')} Kz para o total de ${total.toLocaleString('pt-AO')} Kz.`,
-        type: 'error',
-      });
-      setTimeout(() => setScanAlert(null), 4000);
       return;
     }
 
@@ -453,9 +413,7 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
         { products: db.products, taxConfigs: db.taxConfigurations }
       );
 
-      // Dados de pagamento e troco
-      const finalReceived = isCashPayment ? (numericReceived || total) : total;
-      const finalChange = isCashPayment ? changeAmount : 0;
+      // Dados de pagamento
       const methodLabel =
         paymentMethod === 'DINHEIRO'
           ? 'Dinheiro (Kz)'
@@ -465,10 +423,10 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
           ? 'Cartão'
           : 'Transferência';
 
-      newDoc.amountReceived = finalReceived;
-      newDoc.changeAmount = finalChange;
+      newDoc.amountReceived = total;
+      newDoc.changeAmount = 0;
       newDoc.paymentMethodName = methodLabel;
-      newDoc.notes = `Pagamento: ${methodLabel} | Entregue: ${finalReceived.toLocaleString('pt-AO')} Kz | Troco: ${finalChange.toLocaleString('pt-AO')} Kz`;
+      newDoc.notes = `Pagamento: ${methodLabel}`;
 
       // Guardar na base de dados
       db.documents.set(newDoc.id, newDoc);
@@ -498,11 +456,9 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
 
       setLastIssuedDoc(newDoc);
       setShowReceiptModal(true);
-      const changeMsg = finalChange > 0 ? ` • Troco a devolver: ${finalChange.toLocaleString('pt-AO')} Kz` : '';
-      setFeedbackSuccess(`Venda ${newDoc.documentNumber} emitida e assinada com sucesso!${changeMsg}`);
+      setFeedbackSuccess(`Venda ${newDoc.documentNumber} emitida e assinada com sucesso!`);
       setCart([]);
       setDiscountAmount(0);
-      setAmountReceivedInput('');
 
       // Re-focar no leitor para a próxima venda
       setTimeout(() => {
@@ -929,191 +885,12 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
             </div>
           </div>
 
-          {/* PAINEL DE CÁLCULO DE TROCO (DINHEIRO OU MULTICAIXA) */}
-          {paymentMethod === 'DINHEIRO' ? (
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-extrabold text-slate-900 flex items-center gap-1.5">
-                  <Coins className="w-4 h-4 text-emerald-600" />
-                  <span>Cálculo de Troco</span>
-                </span>
-                {amountReceivedInput && (
-                  <button
-                    type="button"
-                    onClick={handleClearReceivedAmount}
-                    className="text-[10px] text-slate-400 hover:text-rose-600 transition-colors cursor-pointer font-bold"
-                  >
-                    Limpar
-                  </button>
-                )}
-              </div>
-
-              {/* Campo de Entrada de Valor Entregue */}
-              <div className="space-y-1">
-                <div className="text-[11px] font-medium text-slate-600 flex justify-between">
-                  <span>Valor Entregue pelo Cliente:</span>
-                  <span className="font-mono text-slate-400">Moeda: Kwanza (AOA)</span>
-                </div>
-                <div className="relative flex items-center">
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder={`Ex: ${total > 0 ? (total + (total % 1000 === 0 ? 1000 : 500)).toLocaleString('pt-AO') : '5.000'}`}
-                    value={amountReceivedInput}
-                    onChange={(e) => {
-                      const clean = e.target.value.replace(/[^\d]/g, '');
-                      setAmountReceivedInput(clean);
-                    }}
-                    className="w-full pl-3 pr-20 py-2 bg-white border-2 border-blue-400/80 focus:border-blue-600 focus:outline-none rounded-xl text-base font-extrabold font-mono text-slate-900 placeholder:text-slate-300 shadow-2xs transition-all"
-                  />
-                  <div className="absolute right-1.5 flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={handleSetExactAmount}
-                      className="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg text-[10px] font-black tracking-wide cursor-pointer transition-colors"
-                      title="Definir valor exato sem troco"
-                    >
-                      Exato
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Botões de Notas Rápidas do Kwanza */}
-              <div className="space-y-1">
-                <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                  Notas Rápidas em Kwanzas:
-                </div>
-                <div className="grid grid-cols-4 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleSetDirectBanknote(500)}
-                    className="py-1 px-1 rounded-lg bg-white hover:bg-emerald-50 border border-slate-200 text-[10.5px] font-bold text-slate-700 hover:text-emerald-700 transition-colors cursor-pointer shadow-2xs font-mono"
-                  >
-                    500 Kz
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSetDirectBanknote(1000)}
-                    className="py-1 px-1 rounded-lg bg-white hover:bg-emerald-50 border border-slate-200 text-[10.5px] font-bold text-slate-700 hover:text-emerald-700 transition-colors cursor-pointer shadow-2xs font-mono"
-                  >
-                    1.000 Kz
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSetDirectBanknote(2000)}
-                    className="py-1 px-1 rounded-lg bg-white hover:bg-emerald-50 border border-slate-200 text-[10.5px] font-bold text-slate-700 hover:text-emerald-700 transition-colors cursor-pointer shadow-2xs font-mono"
-                  >
-                    2.000 Kz
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSetDirectBanknote(5000)}
-                    className="py-1 px-1 rounded-lg bg-white hover:bg-emerald-50 border border-slate-200 text-[10.5px] font-bold text-slate-700 hover:text-emerald-700 transition-colors cursor-pointer shadow-2xs font-mono"
-                  >
-                    5.000 Kz
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSetDirectBanknote(10000)}
-                    className="py-1 px-1 rounded-lg bg-white hover:bg-emerald-50 border border-slate-200 text-[10.5px] font-bold text-slate-700 hover:text-emerald-700 transition-colors cursor-pointer shadow-2xs font-mono"
-                  >
-                    10.000 Kz
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSetDirectBanknote(20000)}
-                    className="py-1 px-1 rounded-lg bg-white hover:bg-emerald-50 border border-slate-200 text-[10.5px] font-bold text-slate-700 hover:text-emerald-700 transition-colors cursor-pointer shadow-2xs font-mono"
-                  >
-                    20.000 Kz
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleAddBanknote(5000)}
-                    className="py-1 px-1 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 text-[10.5px] font-extrabold text-blue-800 transition-colors cursor-pointer shadow-2xs font-mono"
-                    title="Adicionar mais 5.000 Kz ao montante entregue"
-                  >
-                    +5.000
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleAddBanknote(10000)}
-                    className="py-1 px-1 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 text-[10.5px] font-extrabold text-blue-800 transition-colors cursor-pointer shadow-2xs font-mono"
-                    title="Adicionar mais 10.000 Kz ao montante entregue"
-                  >
-                    +10.000
-                  </button>
-                </div>
-              </div>
-
-              {/* Apresentação do Troco / Situação */}
-              {numericReceived > total ? (
-                <div className="p-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl shadow-md space-y-0.5 animate-in zoom-in-95 duration-150">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-black uppercase tracking-wider text-emerald-100 flex items-center gap-1">
-                      <Banknote className="w-3.5 h-3.5" />
-                      Troco a Devolver
-                    </span>
-                    <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded font-mono font-bold">
-                      Dinheiro
-                    </span>
-                  </div>
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-xl sm:text-2xl font-black font-mono tracking-tight text-white drop-shadow-xs">
-                      {changeAmount.toLocaleString('pt-AO')} Kz
-                    </span>
-                    <div className="text-[10.5px] text-emerald-100 font-mono text-right">
-                      <div>Entregue: {numericReceived.toLocaleString('pt-AO')} Kz</div>
-                      <div>Total: {total.toLocaleString('pt-AO')} Kz</div>
-                    </div>
-                  </div>
-                </div>
-              ) : numericReceived === total && numericReceived > 0 ? (
-                <div className="p-2.5 bg-blue-50 border border-blue-300 text-blue-900 rounded-xl flex items-center justify-between text-xs font-bold animate-in fade-in duration-150">
-                  <span className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-blue-600" />
-                    <span>Valor Exato Entregue</span>
-                  </span>
-                  <span className="font-mono text-blue-800 font-extrabold">Troco: 0 Kz</span>
-                </div>
-              ) : numericReceived > 0 && numericReceived < total ? (
-                <div className="p-2.5 bg-amber-50 border border-amber-300 text-amber-950 rounded-xl space-y-1 animate-in fade-in duration-150">
-                  <div className="flex items-center justify-between text-xs font-bold text-amber-900">
-                    <span className="flex items-center gap-1.5">
-                      <AlertCircle className="w-4 h-4 text-amber-600" />
-                      <span>Valor Insuficiente</span>
-                    </span>
-                    <span className="font-mono text-rose-600 font-black">
-                      Falta: -{missingAmount.toLocaleString('pt-AO')} Kz
-                    </span>
-                  </div>
-                  <div className="text-[10.5px] text-amber-800 flex justify-between font-mono">
-                    <span>Entregue: {numericReceived.toLocaleString('pt-AO')} Kz</span>
-                    <span>Total a Cobrar: {total.toLocaleString('pt-AO')} Kz</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-2 bg-white rounded-xl border border-dashed border-slate-300 text-center text-[10.5px] text-slate-500">
-                  Insira o valor entregue para calcular automaticamente o troco.
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 text-xs flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
-                <span className="font-medium">Pagamento Eletrónico (TPA / Transferência):</span>
-              </span>
-              <span className="font-bold text-slate-900 font-mono">Sem Troco (Valor Exato)</span>
-            </div>
-          )}
-
           {/* Botão de Finalizar Venda com Assinatura AGT */}
           <button
             type="button"
             onClick={handleFinalizeSale}
             disabled={cart.length === 0 || isProcessing}
-            className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-extrabold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-extrabold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-2"
           >
             {isProcessing ? (
               <span>A Processar e Assinar Factura/Recibo...</span>
@@ -1124,13 +901,6 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
               </>
             )}
           </button>
-
-          {/* Certificação Fiscal */}
-          <div className="pt-1 text-center">
-            <span className="text-[10px] text-slate-400">
-              Certificação AGT N.º 412/AGT/2026 • RSA-2048 • QR Code Oficial
-            </span>
-          </div>
         </aside>
       </div>
 
