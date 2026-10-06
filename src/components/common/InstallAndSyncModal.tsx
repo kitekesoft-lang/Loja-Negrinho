@@ -151,7 +151,9 @@ export const InstallAndSyncModal: React.FC<InstallAndSyncModalProps> = ({
     setDownloadError(null);
 
     try {
-      const response = await fetch('/downloads/Kiteke-Pro-Portable-x64.zip');
+      const response = await fetch('/downloads/Kiteke-Pro-Portable-x64.zip', {
+        credentials: 'include',
+      });
 
       if (!response.ok) {
         throw new Error(`Servidor retornou erro HTTP ${response.status}`);
@@ -373,14 +375,39 @@ export const InstallAndSyncModal: React.FC<InstallAndSyncModalProps> = ({
 
                     {/* Mensagem de Erro com Explicação Clara */}
                     {downloadError && (
-                      <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-[11px] space-y-1">
+                      <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-[11px] space-y-2">
                         <div className="flex items-center gap-1.5 font-bold">
-                          <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                          <span>Falha na Transferência de 90 MB</span>
+                          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                          <span>Bloqueio de Download no Navegador Cloud</span>
                         </div>
                         <p className="text-[10.5px] leading-relaxed text-rose-700">
-                          {downloadError}
+                          O ambiente de visualização da Cloud bloqueou a transferência de ficheiros binários pesados de 90 MB. 
+                          Pode abrir o ficheiro diretamente numa nova aba ou instalar a versão nativa em 1-clique abaixo:
                         </p>
+                        <div className="flex gap-2 pt-1">
+                          <a
+                            href="/downloads/Kiteke-Pro-Portable-x64.zip"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 py-1.5 px-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-[10.5px] text-center flex items-center justify-center gap-1 transition-colors"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            <span>Abrir em Nova Aba</span>
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const fullUrl = `${window.location.origin}/downloads/Kiteke-Pro-Portable-x64.zip`;
+                              navigator.clipboard.writeText(fullUrl);
+                              setSyncFeedback('Link de download copiado! Cole na barra de endereço do Chrome.');
+                              setTimeout(() => setSyncFeedback(null), 4000);
+                            }}
+                            className="py-1.5 px-2.5 bg-white border border-rose-200 text-rose-800 hover:bg-rose-100 font-semibold rounded-lg text-[10.5px] transition-colors cursor-pointer flex items-center gap-1"
+                          >
+                            <Copy className="w-3 h-3 text-rose-600" />
+                            <span>Copiar Link</span>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
