@@ -17,15 +17,11 @@ import { OperatorPayrollView } from './OperatorPayrollView';
 import { OperatorSaftImporterView } from './OperatorSaftImporterView';
 import { PublicInvoiceVerificationView } from '../fiscal/PublicInvoiceVerificationView';
 import { LicenseManagerView } from '../admin/LicenseManagerView';
-import { InstallAndSyncModal } from '../common/InstallAndSyncModal';
-import { AndroidInstallGuideModal } from '../common/AndroidInstallGuideModal';
-import { useNetworkStatus } from '../../hooks/useNetworkStatus';
-import { usePWAInstall } from '../../hooks/usePWAInstall';
 import { FiscalDatabase } from '../../core/fiscal/repository/FiscalDatabase';
-import { LicenseService } from '../../core/fiscal/security/LicenseService';
 import {
   LayoutDashboard,
   ShoppingCart,
+  DollarSign,
   Package,
   Boxes,
   Users,
@@ -40,20 +36,10 @@ import {
   WalletCards,
   FileUp,
   Search,
-  Bell,
   ChevronDown,
   Shield,
   LogOut,
-  QrCode,
   Store,
-  DollarSign,
-  Download,
-  Cloud,
-  Wifi,
-  WifiOff,
-  ChevronRight,
-  Smartphone,
-  Sparkles,
 } from 'lucide-react';
 
 interface OperatorAppLayoutProps {
@@ -78,34 +64,17 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
   const [activeNav, setActiveNav] = useState<string>('dashboard');
   const [userMenuOpen, setUserMenuOpen] = useState<boolean>(false);
   const [globalSearch, setGlobalSearch] = useState<string>('');
-  const { isOnline } = useNetworkStatus();
-  const { isInstalled, isAndroid, isIOS, isInstallable, promptInstall } = usePWAInstall();
-  const [showInstallModal, setShowInstallModal] = useState<boolean>(false);
-  const [showAndroidGuideModal, setShowAndroidGuideModal] = useState<boolean>(false);
-  const [installModalTab, setInstallModalTab] = useState<'INSTALLER' | 'STORAGE' | 'NETLIFY'>('INSTALLER');
-
-  const handleOpenInstall = async () => {
-    if (isAndroid || isIOS) {
-      if (isInstallable) {
-        const res = await promptInstall();
-        if (res === 'accepted') return;
-      }
-      setShowAndroidGuideModal(true);
-      return;
-    }
-    setInstallModalTab('INSTALLER');
-    setShowInstallModal(true);
-  };
 
   const isOnlyAdminA = canAccessAdminLayout(currentUser);
   const db = FiscalDatabase.getInstance();
-  const currentLicense = db.getLicense();
-  const licenseDaysLeft = LicenseService.getDaysRemaining(currentLicense.expirationDate);
+  const company = Array.from(db.companies.values())[0];
+  const establishmentName = company?.tradeName || company?.name || 'Minha Loja';
 
   // Módulos do Sistema ERP & POS (incluindo Restauração, OS, RH e Importador SAF-T)
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'vendas', label: 'Vendas (POS)', icon: ShoppingCart },
+    { id: 'caixa', label: 'Caixa Diário', icon: DollarSign },
     { id: 'restaurante', label: 'Restauração & Mesas', icon: UtensilsCrossed },
     { id: 'os', label: 'Ordens de Serviço', icon: Wrench },
     { id: 'produtos', label: 'Produtos', icon: Package },
@@ -125,18 +94,18 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
 
   return (
     <div id="minha-loja-layout" className="flex h-screen w-full bg-[#f8fafc] text-slate-800 font-sans overflow-hidden">
-      {/* 1. SIDEBAR AZUL ESCURO / MARINHO ULTRA COMPACTO CONFORME IMAGEM DE REFERÊNCIA (< 5 CM) */}
+      {/* 1. SIDEBAR AZUL ESCURO / MARINHO ULTRA COMPACTO FIXO SEM DESLIZAMENTO */}
       <aside
         style={{ width: '64px', maxWidth: '5cm' }}
-        className="w-[64px] max-w-[5cm] bg-[#061224] text-white flex flex-col items-center justify-between shrink-0 shadow-2xl select-none z-30 py-3 relative border-r border-sky-950/70 overflow-visible"
+        className="w-[64px] max-w-[5cm] bg-[#061224] text-white flex flex-col items-center justify-start shrink-0 shadow-2xl select-none z-30 py-3 relative border-r border-sky-950/70"
       >
-        {/* Navegação Vertical de Módulos (Ícones Alinhados ao Centro) */}
-        <div className="w-full flex-1 flex flex-col items-center space-y-1.5 overflow-y-auto overflow-x-visible no-scrollbar py-1">
+        {/* Navegação Vertical de Módulos (Ícones Alinhados ao Centro, Sem Deslizamentos) */}
+        <div className="w-full flex-1 flex flex-col items-center space-y-1.5 overflow-y-auto no-scrollbar py-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeNav === item.id;
             return (
-              <div key={item.id} className="relative group flex items-center justify-center w-full px-2">
+              <div key={item.id} className="relative flex items-center justify-center w-full px-2">
                 {/* Linha indicadora azul claro no item ativo */}
                 {isActive && (
                   <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-sky-400 rounded-r shadow-[0_0_8px_rgba(56,189,248,0.9)]" />
@@ -145,7 +114,7 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveNav(item.id)}
-                  className={`w-11 h-11 flex items-center justify-center rounded-2xl transition-all duration-150 cursor-pointer ${
+                  className={`w-11 h-11 flex items-center justify-center rounded-2xl transition-colors cursor-pointer ${
                     isActive
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/50 ring-2 ring-blue-400/40'
                       : 'text-slate-400 hover:text-sky-300 hover:bg-white/10'
@@ -155,130 +124,32 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
                 >
                   <Icon className="w-5 h-5 shrink-0" />
                 </button>
-
-                {/* FAIXA QUE SE ESTENDE COM O NOME EM AZUL CLARO AO PASSAR O CURSOR */}
-                <div
-                  onClick={() => setActiveNav(item.id)}
-                  className="absolute left-[58px] top-1/2 -translate-y-1/2 z-50 pointer-events-none opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-150 ease-out origin-left -translate-x-2 group-hover:translate-x-0 cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5 px-3.5 py-2 bg-[#071630]/98 backdrop-blur-md border border-sky-400/50 rounded-xl shadow-[0_8px_25px_rgba(0,0,0,0.8)] whitespace-nowrap min-w-[130px]">
-                    <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse shadow-[0_0_8px_rgba(56,189,248,1)]"></span>
-                    <span className="text-sky-300 font-extrabold text-xs tracking-wider uppercase drop-shadow-xs">
-                      {item.label}
-                    </span>
-                    <ChevronRight className="w-3.5 h-3.5 text-sky-400 ml-auto" />
-                  </div>
-                </div>
               </div>
             );
           })}
-        </div>
-
-        {/* Rodapé da Barra Lateral com Ações Compactas */}
-        <div className="w-full flex flex-col items-center space-y-2 pt-3 border-t border-white/10 shrink-0 px-2 overflow-visible">
-          {/* Caixa Diário */}
-          <div className="relative group flex items-center justify-center w-full">
-            <button
-              type="button"
-              onClick={() => setActiveNav('caixa')}
-              className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all cursor-pointer ${
-                activeNav === 'caixa'
-                  ? 'bg-amber-500 text-white shadow-md'
-                  : 'text-amber-400/80 hover:text-amber-300 hover:bg-amber-500/15'
-              }`}
-              aria-label="Caixa Diário"
-            >
-              <DollarSign className="w-4 h-4" />
-            </button>
-            <div
-              onClick={() => setActiveNav('caixa')}
-              className="absolute left-[58px] top-1/2 -translate-y-1/2 z-50 pointer-events-none opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-150 ease-out origin-left -translate-x-2 group-hover:translate-x-0 cursor-pointer"
-            >
-              <div className="flex items-center gap-2 px-3.5 py-2 bg-[#071630]/98 backdrop-blur-md border border-amber-400/50 rounded-xl shadow-2xl whitespace-nowrap">
-                <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                <span className="text-sky-300 font-extrabold text-xs tracking-wider uppercase">
-                  Caixa Diário
-                </span>
-                <ChevronRight className="w-3.5 h-3.5 text-sky-400 ml-auto" />
-              </div>
-            </div>
-          </div>
-
-          {/* Validar QR */}
-          <div className="relative group flex items-center justify-center w-full">
-            <button
-              type="button"
-              onClick={() => setActiveNav('validar')}
-              className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all cursor-pointer ${
-                activeNav === 'validar'
-                  ? 'bg-emerald-600 text-white shadow-md'
-                  : 'text-emerald-400/80 hover:text-emerald-300 hover:bg-emerald-500/15'
-              }`}
-              aria-label="Validar Fatura QR"
-            >
-              <QrCode className="w-4 h-4" />
-            </button>
-            <div
-              onClick={() => setActiveNav('validar')}
-              className="absolute left-[58px] top-1/2 -translate-y-1/2 z-50 pointer-events-none opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-150 ease-out origin-left -translate-x-2 group-hover:translate-x-0 cursor-pointer"
-            >
-              <div className="flex items-center gap-2 px-3.5 py-2 bg-[#071630]/98 backdrop-blur-md border border-emerald-400/50 rounded-xl shadow-2xl whitespace-nowrap">
-                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                <span className="text-sky-300 font-extrabold text-xs tracking-wider uppercase">
-                  Validar Fatura QR
-                </span>
-                <ChevronRight className="w-3.5 h-3.5 text-sky-400 ml-auto" />
-              </div>
-            </div>
-          </div>
-
-          {/* Instalar App / Central de Instalação */}
-          <div className="relative group flex items-center justify-center w-full">
-            <button
-              type="button"
-              onClick={handleOpenInstall}
-              className="w-10 h-10 flex items-center justify-center rounded-xl text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 transition-all cursor-pointer"
-              aria-label="Instalar Aplicação"
-            >
-              <Download className="w-4 h-4" />
-            </button>
-            <div
-              onClick={handleOpenInstall}
-              className="absolute left-[58px] top-1/2 -translate-y-1/2 z-50 pointer-events-none opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-150 ease-out origin-left -translate-x-2 group-hover:translate-x-0 cursor-pointer"
-            >
-              <div className="flex items-center gap-2 px-3.5 py-2 bg-[#071630]/98 backdrop-blur-md border border-sky-400/50 rounded-xl shadow-2xl whitespace-nowrap">
-                <span className="w-2 h-2 rounded-full bg-sky-400"></span>
-                <span className="text-sky-300 font-extrabold text-xs tracking-wider uppercase">
-                  Instalar Aplicação
-                </span>
-                <ChevronRight className="w-3.5 h-3.5 text-sky-400 ml-auto" />
-              </div>
-            </div>
-          </div>
         </div>
       </aside>
 
       {/* 2. ÁREA PRINCIPAL COM HEADER BRANCO SUPERIOR E CONTEÚDO SCROLLÁVEL */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Header Branco */}
-        <header className="h-16 bg-white border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between shrink-0 z-10 gap-3">
-          {/* Identidade "Minha Loja" e Módulo Ativo */}
+        {/* Top Header Branco: Apenas Nome/Logo, Pesquisa, Utilizador Logado e Botão de Logout */}
+        <header className="h-16 bg-white border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between shrink-0 z-10 gap-4">
+          {/* 1. Nome e Logo do Estabelecimento */}
           <div className="flex items-center gap-3 shrink-0">
             <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-xs">
-              <Store className="w-4.5 h-4.5 text-white" />
+              <Store className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="font-extrabold text-xs text-slate-900 leading-tight flex items-center gap-1.5">
-                <span>Minha Loja</span>
-                <span className="text-[9px] px-1.5 py-0.2 bg-blue-100 text-blue-700 font-bold rounded-md">POS</span>
-              </div>
-              <div className="text-[10px] text-blue-600 font-semibold tracking-wide capitalize">
+              <span className="font-extrabold text-sm text-slate-900 leading-tight block">
+                {establishmentName}
+              </span>
+              <span className="text-[10px] text-blue-600 font-semibold tracking-wide capitalize block">
                 {menuItems.find((m) => m.id === activeNav)?.label || activeNav}
-              </div>
+              </span>
             </div>
           </div>
 
-          {/* Barra de Pesquisa Geral */}
+          {/* 2. Campo de Pesquisa Geral */}
           <div className="relative flex-1 max-w-md hidden md:block">
             <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
             <input
@@ -290,102 +161,13 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
             />
           </div>
 
-          {/* Notificações, Status de Rede e Perfil do Utilizador */}
-          <div className="flex items-center gap-3">
-            {/* Status de Armazenamento Local / Nuvem */}
-            <button
-              onClick={() => {
-                setInstallModalTab('STORAGE');
-                setShowInstallModal(true);
-              }}
-              className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors cursor-pointer ${
-                isOnline
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
-                  : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
-              }`}
-              title={
-                isOnline
-                  ? 'Conexão Online: Armazenamento local e nuvem sincronizados'
-                  : 'Modo Offline: Armazenamento local ativo no dispositivo'
-              }
-            >
-              <span
-                className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}
-              ></span>
-              <span>{isOnline ? 'Nuvem Activa' : 'Offline (Local)'}</span>
-            </button>
-
-            {/* Botão de Instalador Windows & Android */}
-            <button
-              onClick={handleOpenInstall}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer"
-              title="Instalar no Windows ou Android"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Instalar App</span>
-              <span className="md:hidden">Instalar</span>
-            </button>
-            {/* Status de Acesso Livre (Login Suspenso) */}
-            {isLoginSuspended && (
-              <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs">
-                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-                <span className="font-semibold text-[11px]">Acesso Livre (Login Suspenso)</span>
-                {onReenableLogin && (
-                  <button
-                    onClick={onReenableLogin}
-                    className="ml-1 text-[10px] bg-amber-500 hover:bg-amber-600 text-white font-bold px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
-                    title="Reativar exigência de login quando autorizar disponibilização a pessoas de fora"
-                  >
-                    Reativar Login
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Ícone de Sino com badge de notificação */}
-            <button className="relative p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
-                3
-              </span>
-            </button>
-
-            {/* Badge de Licença do Sistema */}
-            <button
-              type="button"
-              onClick={() => {
-                if (isOnlyAdminA) {
-                  setActiveNav('licenca');
-                }
-              }}
-              className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer ${
-                currentLicense.plan === 'ANUAL'
-                  ? 'bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100 shadow-2xs'
-                  : currentLicense.plan === 'SEMESTRAL'
-                  ? 'bg-blue-50 text-blue-900 border-blue-300 hover:bg-blue-100 shadow-2xs'
-                  : 'bg-amber-50 text-amber-950 border-amber-300 hover:bg-amber-100 shadow-2xs'
-              }`}
-              title={isOnlyAdminA ? 'Clique para gerir o plano de licença no módulo do Administrador A' : 'Licença do Sistema'}
-            >
-              <KeyRound className="w-3.5 h-3.5 text-current shrink-0" />
-              <span>
-                {currentLicense.plan === 'ANUAL'
-                  ? 'Licença Anual'
-                  : currentLicense.plan === 'SEMESTRAL'
-                  ? 'Licença Semestral'
-                  : 'Licença Demo'}
-                {licenseDaysLeft > 0 ? ` (${licenseDaysLeft}d)` : ' (Expirada)'}
-              </span>
-            </button>
-
-            {/* Separador vertical sutil */}
-            <div className="h-6 w-px bg-slate-200"></div>
-
-            {/* Perfil do Utilizador (Avatar, Nome, Cargo + Dropdown) */}
+          {/* 3. Utilizador Logado e Botão de Logout */}
+          <div className="flex items-center gap-3 shrink-0">
+            {/* Perfil do Utilizador Logado */}
             <div className="relative">
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-3 p-1.5 rounded-xl hover:bg-slate-50 transition-all cursor-pointer text-left"
+                className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-slate-50 transition-all cursor-pointer text-left"
               >
                 {/* Avatar */}
                 <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-200 to-rose-200 border border-slate-200 flex items-center justify-center font-bold text-slate-800 text-xs overflow-hidden shadow-xs">
@@ -403,7 +185,7 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
                   <div className="text-[11px] text-slate-500">{currentUser.role}</div>
                 </div>
 
-                <ChevronDown className="w-4 h-4 text-slate-400 ml-1" />
+                <ChevronDown className="w-4 h-4 text-slate-400" />
               </button>
 
               {/* Menu Dropdown de Perfil & Sessão */}
@@ -428,11 +210,11 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
                     </div>
                   </div>
 
-                  {/* Alternador Rápido de Utilizador (Teste Livre) */}
+                  {/* Alternador Rápido de Utilizador */}
                   {allUsers && allUsers.length > 0 && onSwitchUser && (
                     <div className="p-2 border-b border-slate-100">
                       <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block mb-1.5 px-2">
-                        Alternar Operador (Teste Livre)
+                        Alternar Operador
                       </span>
                       <div className="space-y-0.5 max-h-36 overflow-y-auto">
                         {allUsers.map((u) => (
@@ -497,7 +279,6 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
                           onReenableLogin();
                         }}
                         className="w-full py-2 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold text-center flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
-                        title="Reativar exigência de credenciais para pessoas de fora"
                       >
                         <Shield className="w-3.5 h-3.5 text-amber-700" />
                         <span>Reativar Exigência de Login</span>
@@ -505,7 +286,7 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
                     </div>
                   )}
 
-                  {/* Botão de Terminar Sessão */}
+                  {/* Botão de Terminar Sessão no Menu */}
                   {onLogout && (
                     <div className="p-2">
                       <button
@@ -524,36 +305,20 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
               )}
             </div>
 
-            {/* Botão Directo de Terminar Sessão no Topo */}
+            {/* Botão de Logout Direto */}
             {onLogout && (
               <button
                 type="button"
                 onClick={onLogout}
-                className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 transition-colors cursor-pointer"
                 title="Terminar Sessão"
               >
                 <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Sair</span>
               </button>
             )}
           </div>
         </header>
-
-        {/* Banner de Instalação Mobile quando aberto no telemóvel e não instalado como standalone */}
-        {!isInstalled && (
-          <div className="md:hidden bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 text-white px-3.5 py-2 flex items-center justify-between shadow-xs shrink-0">
-            <div className="flex items-center gap-2 text-xs font-bold">
-              <Smartphone className="w-4 h-4 text-sky-300 shrink-0" />
-              <span>Instalar App Móvel no Telemóvel (Offline)</span>
-            </div>
-            <button
-              type="button"
-              onClick={handleOpenInstall}
-              className="px-3 py-1 bg-white text-blue-800 hover:bg-sky-50 rounded-lg text-[11px] font-black shadow-xs cursor-pointer transition-colors"
-            >
-              Instalar Agora
-            </button>
-          </div>
-        )}
 
         {/* Conteúdo Dinâmico dos 10 Módulos */}
         <main className="flex-1 overflow-y-auto p-6">
@@ -599,19 +364,6 @@ export const OperatorAppLayout: React.FC<OperatorAppLayoutProps> = ({
           </div>
         </main>
       </div>
-
-      {/* Modal de Instalação e Armazenamento Local / Nuvem */}
-      <InstallAndSyncModal
-        isOpen={showInstallModal}
-        onClose={() => setShowInstallModal(false)}
-        initialTab={installModalTab}
-      />
-
-      {/* Modal Guiado de Instalação Móvel (Android / iOS) */}
-      <AndroidInstallGuideModal
-        isOpen={showAndroidGuideModal}
-        onClose={() => setShowAndroidGuideModal(false)}
-      />
     </div>
   );
 };

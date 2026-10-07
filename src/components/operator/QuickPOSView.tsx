@@ -95,6 +95,7 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [tempDiscount, setTempDiscount] = useState<number>(0);
+  const [amountReceivedInput, setAmountReceivedInput] = useState<string>('');
 
   // Estados fiscais
   const [isProcessing, setIsProcessing] = useState(false);
@@ -191,6 +192,7 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
     if (cart.length > 0) {
       setCart([]);
       setDiscountAmount(0);
+      setAmountReceivedInput('');
       searchInputRef.current?.focus();
       setScanAlert({ message: 'Carrinho de compras esvaziado.', type: 'success' });
       setTimeout(() => setScanAlert(null), 3000);
@@ -374,6 +376,12 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
   const totalItemsCount = cart.reduce((acc, item) => acc + item.quantity, 0);
   const total = Math.max(0, subtotal - discountAmount);
 
+  // Cálculo de Troco (Dinheiro) - Sem atalhos para notas rápidas
+  const isCashPayment = paymentMethod === 'DINHEIRO';
+  const numericReceived = parseFloat(amountReceivedInput.replace(/[^0-9.]/g, '')) || 0;
+  const changeAmount = isCashPayment && numericReceived >= total ? Math.max(0, numericReceived - total) : 0;
+  const missingAmount = isCashPayment && numericReceived > 0 && numericReceived < total ? Math.max(0, total - numericReceived) : 0;
+
   // Finalizar Venda Fiscal (AGT / RSA-2048 / FR)
   const handleFinalizeSale = () => {
     if (cart.length === 0) {
@@ -413,7 +421,7 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
         { products: db.products, taxConfigs: db.taxConfigurations }
       );
 
-      // Dados de pagamento
+      // Dados de pagamento e troco
       const methodLabel =
         paymentMethod === 'DINHEIRO'
           ? 'Dinheiro (Kz)'
@@ -423,10 +431,15 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
           ? 'Cartão'
           : 'Transferência';
 
-      newDoc.amountReceived = total;
-      newDoc.changeAmount = 0;
+      const finalReceived = isCashPayment && numericReceived > 0 ? numericReceived : total;
+      const finalChange = isCashPayment && numericReceived >= total ? changeAmount : 0;
+
+      newDoc.amountReceived = finalReceived;
+      newDoc.changeAmount = finalChange;
       newDoc.paymentMethodName = methodLabel;
-      newDoc.notes = `Pagamento: ${methodLabel}`;
+      newDoc.notes = finalChange > 0
+        ? `Pagamento: ${methodLabel} | Recebido: ${finalReceived.toLocaleString('pt-AO')} Kz | Troco: ${finalChange.toLocaleString('pt-AO')} Kz`
+        : `Pagamento: ${methodLabel}`;
 
       // Guardar na base de dados
       db.documents.set(newDoc.id, newDoc);
@@ -456,9 +469,11 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
 
       setLastIssuedDoc(newDoc);
       setShowReceiptModal(true);
-      setFeedbackSuccess(`Venda ${newDoc.documentNumber} emitida e assinada com sucesso!`);
+      const changeMsg = finalChange > 0 ? ` • Troco a devolver: ${finalChange.toLocaleString('pt-AO')} Kz` : '';
+      setFeedbackSuccess(`Venda ${newDoc.documentNumber} emitida e assinada com sucesso!${changeMsg}`);
       setCart([]);
       setDiscountAmount(0);
+      setAmountReceivedInput('');
 
       // Re-focar no leitor para a próxima venda
       setTimeout(() => {
@@ -884,6 +899,74 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
               </label>
             </div>
           </div>
+
+          {/* PAINEL DE CÁLCULO DE TROCO (SEM ATALHOS PARA NOTAS RÁPIDAS) */}
+          {paymentMethod === 'DINHEIRO' && (
+            <div className="p-3 bg-slate-50 border border-slate-200/90 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800">
+                  Cálculo de Troco
+                </span>
+                {amountReceivedInput && (
+                  <button
+                    type="button"
+                    onClick={() => setAmountReceivedInput('')}
+                    className="text-[10px] text-slate-400 hover:text-slate-600 font-semibold cursor-pointer underline"
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  Valor Entregue / Recebido (Kz)
+                </label>
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Ex: 50.000"
+                    value={amountReceivedInput}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, '');
+                      setAmountReceivedInput(val ? Number(val).toLocaleString('pt-AO') : '');
+                    }}
+                    className="w-full pl-3 pr-20 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setAmountReceivedInput(total > 0 ? total.toLocaleString('pt-AO') : '')}
+                    className="absolute right-1.5 px-2 py-1 text-[10px] font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer"
+                    title="Definir valor exato da compra"
+                  >
+                    Valor Exato
+                  </button>
+                </div>
+              </div>
+
+              {/* Resultado do Troco ou Falta */}
+              {numericReceived > 0 && (
+                <div className="pt-0.5">
+                  {numericReceived >= total ? (
+                    <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
+                      <span className="text-xs font-bold text-emerald-800">Troco a Devolver:</span>
+                      <span className="text-sm font-extrabold text-emerald-900 font-mono">
+                        {changeAmount.toLocaleString('pt-AO')} Kz
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
+                      <span className="text-xs font-bold text-amber-800">Falta a Pagar:</span>
+                      <span className="text-sm font-extrabold text-amber-900 font-mono">
+                        {missingAmount.toLocaleString('pt-AO')} Kz
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Botão de Finalizar Venda com Assinatura AGT */}
           <button
