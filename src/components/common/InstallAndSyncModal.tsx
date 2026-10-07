@@ -381,25 +381,24 @@ export const InstallAndSyncModal: React.FC<InstallAndSyncModalProps> = ({
                           <span>Bloqueio de Download no Navegador Cloud</span>
                         </div>
                         <p className="text-[10.5px] leading-relaxed text-rose-700">
-                          O ambiente de visualização da Cloud bloqueou a transferência de ficheiros binários pesados de 90 MB. 
-                          Pode abrir o ficheiro diretamente numa nova aba ou instalar a versão nativa em 1-clique abaixo:
+                          O download de 90 MB pelo navegador foi bloqueado pelo proxy da Cloud. 
+                          <strong>Se abriu uma janela branca, feche-a no 'X' no canto superior direito</strong> — a sua aplicação principal do Kiteke Pro continua aberta normalmente.
                         </p>
                         <div className="flex gap-2 pt-1">
                           <a
                             href="/downloads/Kiteke-Pro-Portable-x64.zip"
-                            target="_blank"
-                            rel="noopener noreferrer"
+                            download="Kiteke-Pro-Portable-x64.zip"
                             className="flex-1 py-1.5 px-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-[10.5px] text-center flex items-center justify-center gap-1 transition-colors"
                           >
-                            <ExternalLink className="w-3 h-3" />
-                            <span>Abrir em Nova Aba</span>
+                            <Download className="w-3 h-3 text-amber-300" />
+                            <span>Download Direto (.zip)</span>
                           </a>
                           <button
                             type="button"
                             onClick={() => {
                               const fullUrl = `${window.location.origin}/downloads/Kiteke-Pro-Portable-x64.zip`;
                               navigator.clipboard.writeText(fullUrl);
-                              setSyncFeedback('Link de download copiado! Cole na barra de endereço do Chrome.');
+                              setSyncFeedback('Link direto copiado para a área de transferência!');
                               setTimeout(() => setSyncFeedback(null), 4000);
                             }}
                             className="py-1.5 px-2.5 bg-white border border-rose-200 text-rose-800 hover:bg-rose-100 font-semibold rounded-lg text-[10.5px] transition-colors cursor-pointer flex items-center gap-1"
