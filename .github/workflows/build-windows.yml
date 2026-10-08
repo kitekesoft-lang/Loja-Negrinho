@@ -21,17 +21,27 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
       - name: Instalar Dependências
+        shell: bash
         run: npm install --legacy-peer-deps
 
       - name: Compilar Frontend Vite
+        shell: bash
         run: npm run build
 
-      - name: Gerar Executáveis Windows (.exe) com Electron Builder
-        run: npx electron-builder --win --x64 --ia32 --publish never
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Gerar Executáveis Windows 64-bit (Instalador NSIS e Portátil)
+        shell: bash
+        run: npx electron-builder --win --x64 --publish never
+
+      - name: Gerar Executáveis Windows 32-bit (Instalador NSIS e Portátil para Win 7/8/10 x86)
+        shell: bash
+        run: npx electron-builder --win --ia32 --publish never
+
+      - name: Listar Ficheiros Gerados na Pasta release
+        shell: bash
+        run: ls -la release/
 
       - name: Publicar Executáveis (.exe) como Artefactos
         uses: actions/upload-artifact@v4
@@ -40,5 +50,5 @@ jobs:
           path: |
             release/*.exe
             release/*.zip
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 14

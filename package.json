@@ -1,7 +1,10 @@
 {
-  "name": "react-example",
+  "name": "kitekepro",
+  "productName": "Kiteke Pro",
+  "description": "Kiteke Pro - Sistema de Gestão Empresarial e Faturação Certificada",
+  "author": "KitekeSoft",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "main": "electron/main/main.cjs",
   "scripts": {
@@ -16,7 +19,9 @@
     "desktop:build:win": "vite build && electron-builder --win",
     "desktop:build:win:x64": "vite build && electron-builder --win --x64",
     "desktop:build:win:x86": "vite build && electron-builder --win --ia32",
-    "desktop:package": "vite build && electron-builder --win --dir"
+    "desktop:package": "vite build && electron-builder --win --dir",
+    "package:codespace": "node scripts/package-desktop.cjs",
+    "package:codespace:all": "node scripts/package-desktop.cjs --all"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

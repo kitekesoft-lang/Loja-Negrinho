@@ -2,6 +2,8 @@
   "appId": "ao.kitekesoft.kitekepro",
   "productName": "Kiteke Pro",
   "copyright": "Copyright © 2026 KitekeSoft — Todos os direitos reservados",
+  "npmRebuild": false,
+  "nodeGypRebuild": false,
   "directories": {
     "output": "release",
     "buildResources": "electron/assets"
