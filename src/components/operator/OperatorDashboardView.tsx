@@ -9,10 +9,8 @@ import {
   TrendingUp,
   AlertCircle,
   ShoppingCart,
-  UtensilsCrossed,
-  Wrench,
+  Boxes,
   WalletCards,
-  FileUp,
   ChevronRight,
 } from 'lucide-react';
 
@@ -279,18 +277,18 @@ export const OperatorDashboardView: React.FC<OperatorDashboardViewProps> = ({
         </div>
       </div>
 
-      {/* 4. Módulos Avançados & Expansão de Negócio (Restauração, OS, RH e SAF-T) */}
+      {/* 4. Acesso Rápido a Módulos Operacionais */}
       <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-bold text-slate-800 tracking-tight flex items-center gap-2">
-              Módulos Especializados Integrados
+              Módulos Principais do Sistema
               <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-800">
-                Paridade Total Trunfo & ERP
+                Atalhos Rápidos
               </span>
             </h2>
             <p className="text-xs text-slate-400">
-              Expansões de retalho, assistência técnica, restauração e gestão de colaboradores
+              Operações de faturação, controlo de armazém, gestão de clientes e recursos humanos
             </p>
           </div>
         </div>
@@ -298,44 +296,66 @@ export const OperatorDashboardView: React.FC<OperatorDashboardViewProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
           <button
             type="button"
-            onClick={() => onNavigateTab?.('restaurante')}
-            className="p-4 rounded-xl border border-amber-200 bg-amber-50/20 hover:bg-amber-50/50 hover:border-amber-400 transition-all text-left cursor-pointer group flex flex-col justify-between"
+            onClick={() => onNavigateTab?.('vendas')}
+            className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/20 hover:bg-emerald-50/50 hover:border-emerald-400 transition-all text-left cursor-pointer group flex flex-col justify-between"
           >
             <div>
-              <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
-                <UtensilsCrossed className="w-4 h-4" />
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
+                <ShoppingCart className="w-4 h-4" />
               </div>
-              <h3 className="font-bold text-xs text-slate-900 group-hover:text-amber-800">
-                Restauração & Mesas
+              <h3 className="font-bold text-xs text-slate-900 group-hover:text-emerald-800">
+                Vendas & Caixa (POS)
               </h3>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Planta de mesas, comandas de cozinha e fecho fiscal
+                Emissão expressa de Factura/Recibo com validação fiscal AGT
               </p>
             </div>
-            <div className="mt-3 flex items-center text-[10px] font-bold text-amber-700">
-              <span>Abrir Sala & Mesas</span>
+            <div className="mt-3 flex items-center text-[10px] font-bold text-emerald-700">
+              <span>Abrir Caixa POS</span>
               <ChevronRight className="w-3 h-3 ml-1 group-hover:translate-x-0.5 transition-transform" />
             </div>
           </button>
 
           <button
             type="button"
-            onClick={() => onNavigateTab?.('os')}
+            onClick={() => onNavigateTab?.('stock')}
             className="p-4 rounded-xl border border-blue-200 bg-blue-50/20 hover:bg-blue-50/50 hover:border-blue-400 transition-all text-left cursor-pointer group flex flex-col justify-between"
           >
             <div>
               <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
-                <Wrench className="w-4 h-4" />
+                <Boxes className="w-4 h-4" />
               </div>
               <h3 className="font-bold text-xs text-slate-900 group-hover:text-blue-800">
-                Ordens de Serviço
+                Gestão de Stocks
               </h3>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Oficinas e assistência técnica com conversão direta em FT/FR
+                Inventário em tempo real, lotes e valorização CMP
               </p>
             </div>
             <div className="mt-3 flex items-center text-[10px] font-bold text-blue-700">
-              <span>Gerir Fichas de Reparação</span>
+              <span>Ver Inventário</span>
+              <ChevronRight className="w-3 h-3 ml-1 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onNavigateTab?.('clientes')}
+            className="p-4 rounded-xl border border-purple-200 bg-purple-50/20 hover:bg-purple-50/50 hover:border-purple-400 transition-all text-left cursor-pointer group flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
+                <Users className="w-4 h-4" />
+              </div>
+              <h3 className="font-bold text-xs text-slate-900 group-hover:text-purple-800">
+                Gestão de Clientes
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Fichas de clientes, NIF fiscal e conta corrente
+              </p>
+            </div>
+            <div className="mt-3 flex items-center text-[10px] font-bold text-purple-700">
+              <span>Listar Clientes</span>
               <ChevronRight className="w-3 h-3 ml-1 group-hover:translate-x-0.5 transition-transform" />
             </div>
           </button>
@@ -353,33 +373,11 @@ export const OperatorDashboardView: React.FC<OperatorDashboardViewProps> = ({
                 RH & Salários Angola
               </h3>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Cálculo de IRT (Lei 28/20), INSS 3%/8% e recibos oficiais
+                Cálculo de IRT (Lei 28/20), INSS 3%/8% e folhas de vencimento
               </p>
             </div>
             <div className="mt-3 flex items-center text-[10px] font-bold text-indigo-700">
               <span>Folha Salarial</span>
-              <ChevronRight className="w-3 h-3 ml-1 group-hover:translate-x-0.5 transition-transform" />
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onNavigateTab?.('saft-import')}
-            className="p-4 rounded-xl border border-purple-200 bg-purple-50/20 hover:bg-purple-50/50 hover:border-purple-400 transition-all text-left cursor-pointer group flex flex-col justify-between"
-          >
-            <div>
-              <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
-                <FileUp className="w-4 h-4" />
-              </div>
-              <h3 className="font-bold text-xs text-slate-900 group-hover:text-purple-800">
-                Importar SAF-T (AO)
-              </h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                Migração instantânea a partir da Trunfo Software e outros
-              </p>
-            </div>
-            <div className="mt-3 flex items-center text-[10px] font-bold text-purple-700">
-              <span>Migrar Dados XML</span>
               <ChevronRight className="w-3 h-3 ml-1 group-hover:translate-x-0.5 transition-transform" />
             </div>
           </button>

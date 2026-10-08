@@ -91,3 +91,37 @@ export interface AGTSimulatorConfig {
   simulateInvalidSignature: boolean;
   simulateDuplicateSubmission: boolean;
 }
+
+export type AGTHomologationStatus = 'PENDING_CERTIFICATION' | 'HOMOLOGATED';
+export type AGTSeriesMode = 'AUTONOMOUS' | 'AGT_DEPENDENT';
+
+export interface AGTHomologationConfig {
+  status: AGTHomologationStatus;
+  communicationKey: string; // Chave de comunicação / Token atribuído pela AGT
+  softwareCertificateNumber: string; // Ex: '0/AGT/2026' (pré-homologação) ou 'CERT-AGT-2026/089' (homologado)
+  seriesGenerationMode: AGTSeriesMode; // 'AUTONOMOUS' antes da homologação; 'AGT_DEPENDENT' após homologação
+  homologatedAt?: string;
+  authorizedByAGT: boolean;
+  lastSeriesSyncAt?: string;
+}
+
+export interface AGTSeriesAuthorizationRequest {
+  documentTypeCode: string;
+  seriesCode: string;
+  fiscalYear: number;
+  companyTaxId: string;
+  establishmentCode: string;
+  initialSequence: number;
+}
+
+export interface AGTSeriesAuthorizationResponse {
+  success: boolean;
+  agtValidationCode: string; // Ex: 'AGT-VAL-2026-FT-A2026'
+  seriesCode: string;
+  documentTypeCode: string;
+  fiscalYear: number;
+  authorizedAt: string;
+  status: 'APPROVED' | 'REJECTED';
+  message: string;
+}
+

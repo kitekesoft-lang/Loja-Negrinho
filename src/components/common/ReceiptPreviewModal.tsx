@@ -37,6 +37,7 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
   initialMode = 'thermal',
 }) => {
   const [printFormat, setPrintFormat] = useState<'thermal' | 'a4'>(initialMode);
+  const [documentCopy, setDocumentCopy] = useState<'ORIGINAL' | 'DUPLICADO' | 'SEGUNDA_VIA'>('ORIGINAL');
   const docTypeInfo = FISCAL_DOCUMENT_TYPES[document.documentTypeCode];
 
   const handlePrint = () => {
@@ -101,6 +102,47 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Seletor Oficial de Vias (Decreto Executivo AGT) */}
+            <div className="bg-stone-800 p-1 rounded-lg border border-stone-700 flex items-center gap-1 text-xs">
+              <span className="text-[10px] text-stone-400 font-semibold px-1 hidden md:inline">Via:</span>
+              <button
+                type="button"
+                onClick={() => setDocumentCopy('ORIGINAL')}
+                className={`px-2 py-1 rounded text-[11px] font-bold cursor-pointer transition-all ${
+                  documentCopy === 'ORIGINAL'
+                    ? 'bg-amber-400 text-stone-950 shadow-xs'
+                    : 'text-stone-300 hover:text-white'
+                }`}
+                title="Via Original para o cliente"
+              >
+                Original
+              </button>
+              <button
+                type="button"
+                onClick={() => setDocumentCopy('DUPLICADO')}
+                className={`px-2 py-1 rounded text-[11px] font-bold cursor-pointer transition-all ${
+                  documentCopy === 'DUPLICADO'
+                    ? 'bg-amber-400 text-stone-950 shadow-xs'
+                    : 'text-stone-300 hover:text-white'
+                }`}
+                title="Duplicado para arquivo"
+              >
+                Duplicado
+              </button>
+              <button
+                type="button"
+                onClick={() => setDocumentCopy('SEGUNDA_VIA')}
+                className={`px-2 py-1 rounded text-[11px] font-bold cursor-pointer transition-all ${
+                  documentCopy === 'SEGUNDA_VIA'
+                    ? 'bg-amber-400 text-stone-950 shadow-xs'
+                    : 'text-stone-300 hover:text-white'
+                }`}
+                title="2ª Via em conformidade com original"
+              >
+                2ª Via
+              </button>
+            </div>
+
             {/* Alternador de Formato: Talão Térmico vs A4 */}
             <div className="bg-stone-800 p-1 rounded-lg border border-stone-700 flex items-center gap-1 text-xs">
               <button
@@ -180,9 +222,25 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
                 <div className="text-[10px] text-stone-500">
                   {company.city}, {company.province} • Angola
                 </div>
+                <div className="text-[9.5px] text-stone-600">
+                  Reg. Com.: <span className="font-semibold text-stone-900">{company.conservatoryRegistration || '1432-19/Luanda'}</span>
+                </div>
+                <div className="text-[9.5px] text-stone-600">
+                  Cap. Social: <span className="font-semibold text-stone-900">{company.capitalSocial || '5.000.000,00 Kz'}</span>
+                </div>
+                <div className="text-[9.5px] text-stone-600 font-semibold">
+                  {company.taxRegime === 'SIMPLIFICADO' ? 'Regime Simplificado de IVA' : 'Regime Geral de IVA'}
+                </div>
                 {company.phone && (
                   <div className="text-[10px] text-stone-500">Tel: {company.phone}</div>
                 )}
+              </div>
+
+              {/* Indicação Oficial de Via Obrigatória conforme Decreto Executivo */}
+              <div className="text-center font-bold text-[10px] tracking-wider py-1 bg-stone-100 border-b border-dashed border-stone-300 uppercase text-stone-900">
+                {documentCopy === 'ORIGINAL' && '*** ORIGINAL (CLIENTE) ***'}
+                {documentCopy === 'DUPLICADO' && '*** DUPLICADO (ARQUIVO) ***'}
+                {documentCopy === 'SEGUNDA_VIA' && '*** 2ª VIA EMITIDA EM CONFORMIDADE COM O ORIGINAL ***'}
               </div>
 
               {/* Informações do Documento */}
@@ -272,7 +330,7 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
                       <span className="font-mono font-medium">{document.amountReceived.toLocaleString('pt-AO', { minimumFractionDigits: 2 })} AOA</span>
                     </div>
                   )}
-                  {document.changeAmount !== undefined && document.changeAmount > 0 ? (
+                  {document.changeAmount !== undefined && document.changeAmount > 0 && (document.amountReceived || 0) >= document.netTotal ? (
                     <div className="flex justify-between font-extrabold text-emerald-800 text-xs pt-0.5 border-t border-dashed border-stone-300">
                       <span>TROCO:</span>
                       <span className="font-mono">{document.changeAmount.toLocaleString('pt-AO', { minimumFractionDigits: 2 })} AOA</span>
@@ -341,15 +399,28 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
                   <p className="text-xs text-stone-600">
                     {company.city}, {company.province} • Angola
                   </p>
+                  <p className="text-xs text-stone-600 font-mono">
+                    <strong>Registo Comercial:</strong> {company.conservatoryRegistration || '1432-19/Luanda'}
+                  </p>
+                  <p className="text-xs text-stone-600 font-mono">
+                    <strong>Capital Social:</strong> {company.capitalSocial || '5.000.000,00 Kz'}
+                  </p>
                   <p className="text-xs text-stone-600">
-                    Regime Fiscal: <strong>Regime Geral de IVA</strong>
+                    Regime Fiscal: <strong>{company.taxRegime === 'SIMPLIFICADO' ? 'Regime Simplificado de IVA' : 'Regime Geral de IVA'}</strong>
                   </p>
                   {company.phone && <p className="text-xs text-stone-500">Tel: {company.phone}</p>}
                 </div>
 
-                {/* Caixa de Identificação do Documento */}
-                <div className="bg-stone-50 p-4 rounded-xl border border-stone-200 space-y-1.5 min-w-[240px] text-xs">
-                  <div className="flex items-center justify-between font-bold text-stone-950 text-sm">
+                {/* Caixa de Identificação do Documento & Indicação Oficial da Via */}
+                <div className="bg-stone-50 p-4 rounded-xl border border-stone-200 space-y-2 min-w-[260px] text-xs">
+                  {/* Indicação Oficial da Via Conforme Decreto Executivo */}
+                  <div className="text-center py-1 px-2 rounded bg-amber-100/80 border border-amber-300 font-extrabold text-[11px] text-amber-950 uppercase tracking-wide">
+                    {documentCopy === 'ORIGINAL' && 'ORIGINAL — DESTINADO AO CLIENTE'}
+                    {documentCopy === 'DUPLICADO' && 'DUPLICADO — ARQUIVO CONTABILÍSTICO'}
+                    {documentCopy === 'SEGUNDA_VIA' && '2ª VIA EMITIDA EM CONFORMIDADE COM O ORIGINAL'}
+                  </div>
+
+                  <div className="flex items-center justify-between font-bold text-stone-950 text-sm pt-0.5">
                     <span>{docTypeInfo?.name || document.documentTypeCode}</span>
                     <span className="font-mono text-blue-700">{document.documentNumber}</span>
                   </div>
@@ -519,7 +590,7 @@ export const ReceiptPreviewModal: React.FC<ReceiptPreviewModalProps> = ({
                         <span className="font-mono">{document.amountReceived.toLocaleString('pt-AO', { minimumFractionDigits: 2 })} AOA</span>
                       </div>
                     )}
-                    {document.changeAmount !== undefined && document.changeAmount > 0 && (
+                    {document.changeAmount !== undefined && document.changeAmount > 0 && (document.amountReceived || 0) >= document.netTotal && (
                       <div className="flex justify-between font-bold text-emerald-800 text-xs bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
                         <span>Troco Devolvido:</span>
                         <span className="font-mono">{document.changeAmount.toLocaleString('pt-AO', { minimumFractionDigits: 2 })} AOA</span>

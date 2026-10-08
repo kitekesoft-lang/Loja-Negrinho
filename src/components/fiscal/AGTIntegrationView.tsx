@@ -230,9 +230,15 @@ export const AGTIntegrationView: React.FC = () => {
                 {certInfo.fingerprint}
               </span>
             </div>
-            <div className="flex justify-between py-1">
+            <div className="flex justify-between py-1 border-b border-stone-100">
               <span className="text-stone-500">Validade do Certificado:</span>
               <span className="font-mono text-emerald-700 font-bold">Válido até 31/12/2028</span>
+            </div>
+            <div className="flex justify-between py-1">
+              <span className="text-stone-500">Número de Homologação AGT:</span>
+              <span className="font-mono text-stone-900 font-bold">
+                {db.getHomologationConfig().softwareCertificateNumber} ({db.getHomologationConfig().status === 'HOMOLOGATED' ? 'Homologado' : 'Modo Autónomo'})
+              </span>
             </div>
           </div>
         </div>

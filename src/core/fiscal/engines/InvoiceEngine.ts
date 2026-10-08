@@ -12,6 +12,7 @@ import { SignatureService } from '../security/SignatureService';
 import { NifValidator } from '../security/NifValidator';
 import { RbacService } from '../security/RbacService';
 import { AuditService } from '../security/AuditService';
+import { FiscalDatabase } from '../repository/FiscalDatabase';
 
 export interface CreateDocumentLineInput {
   productId: string;
@@ -158,7 +159,21 @@ export class InvoiceEngine {
     }
 
     // 5. Alocação Atómica do Número Sequencial da Série
-    const allocation = DocumentSeriesEngine.allocateNextNumber(input.series);
+    // Respeito estrito ao Decreto Executivo: no modo homologado as séries dependem da autorização da AGT
+    let isHomologated = false;
+    let certNumber = '0/AGT/2026';
+    try {
+      const db = FiscalDatabase.getInstance();
+      const hConfig = db.getHomologationConfig();
+      if (hConfig) {
+        isHomologated = hConfig.status === 'HOMOLOGATED';
+        certNumber = hConfig.softwareCertificateNumber || (isHomologated ? 'CERT-AGT-2026/089' : '0/AGT/2026');
+      }
+    } catch {
+      // fallback gracioso em testes unitários isolados
+    }
+
+    const allocation = DocumentSeriesEngine.allocateNextNumber(input.series, isHomologated);
 
     // 6. Datas Fiscais
     const documentDate = input.documentDate || new Date().toISOString().split('T')[0];
@@ -211,7 +226,7 @@ export class InvoiceEngine {
       hash: hashResult.hash,
       previousHash: hashResult.previousHash,
       hashControl: hashResult.hashControl,
-      softwareCertificateNumber: 'CERT-AGT-0000/2026/PROG_VALIDADO',
+      softwareCertificateNumber: certNumber,
       signature,
       canonicalString: signature.canonicalString,
       status: 'ISSUED',

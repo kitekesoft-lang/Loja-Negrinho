@@ -28,13 +28,20 @@ export class DocumentSeriesEngine {
   /**
    * Aloca de forma atómica e sequencial o próximo número da série
    */
-  static allocateNextNumber(series: DocumentSeries): SeriesAllocationResult {
+  static allocateNextNumber(series: DocumentSeries, isHomologated: boolean = false): SeriesAllocationResult {
     if (!series.isActive) {
       throw new Error(`A série fiscal '${series.seriesCode}' (${series.documentTypeCode}) encontra-se INACTIVA.`);
     }
 
     if (series.isClosed) {
       throw new Error(`A série fiscal '${series.seriesCode}' (${series.documentTypeCode}) encontra-se ENCERRADA para emissão fiscal.`);
+    }
+
+    // Validação estrita do Decreto: em modo homologado, a série tem de estar autorizada pela AGT
+    if (isHomologated && !series.isAgtApproved && series.seriesOrigin === 'AGT_AUTHORIZED') {
+      throw new Error(
+        `A série fiscal '${series.seriesCode}' (${series.documentTypeCode}) aguarda validação da AGT. No modo de homologação, todas as séries dependem da autorização oficial da AGT.`
+      );
     }
 
     // Verificar ano fiscal

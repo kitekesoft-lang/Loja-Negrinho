@@ -27,13 +27,20 @@ import {
 
 interface OperatorProductsViewProps {
   currentUser: User;
+  initialSearch?: string;
 }
 
-export const OperatorProductsView: React.FC<OperatorProductsViewProps> = () => {
+export const OperatorProductsView: React.FC<OperatorProductsViewProps> = ({ initialSearch }) => {
   const db = FiscalDatabase.getInstance();
   const [, setTick] = useState(0);
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearch || '');
+
+  useEffect(() => {
+    if (initialSearch !== undefined) {
+      setSearchQuery(initialSearch);
+    }
+  }, [initialSearch]);
   const [selectedCategory, setSelectedCategory] = useState<string>('TODAS');
   const [selectedStatus, setSelectedStatus] = useState<string>('TODOS');
 

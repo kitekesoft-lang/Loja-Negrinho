@@ -1,0 +1,42 @@
+name: Gerar Executável Windows (.exe)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Clonar Repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Instalar Dependências
+        run: npm ci
+
+      - name: Compilar Frontend Vite
+        run: npm run build
+
+      - name: Gerar Executáveis Windows (.exe) com Electron Builder
+        run: npx electron-builder --win --x64
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publicar Executáveis (.exe) como Artefactos
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kiteke-Pro-Windows-EXE
+          path: |
+            release/*.exe
+            release/*.zip
+          retention-days: 14

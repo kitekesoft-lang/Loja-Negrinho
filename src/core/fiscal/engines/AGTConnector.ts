@@ -4,6 +4,8 @@ import {
   AGTDocumentPayload,
   AGTTransmissionReceipt,
   AGTSimulatorConfig,
+  AGTSeriesAuthorizationRequest,
+  AGTSeriesAuthorizationResponse,
 } from '../types/agt';
 import { SignatureService } from '../security/SignatureService';
 import { HashChainingService } from '../security/HashChainingService';
@@ -152,5 +154,71 @@ export class AGTConnector {
     this.processedIdempotencyKeys.set(idempotencyKey, receipt);
 
     return receipt;
+  }
+
+  /**
+   * Valida e regista uma nova série documental no Web Service da AGT.
+   * Conforme o Decreto Executivo: após homologação e mediante inserção da Chave de Comunicação,
+   * as séries passam a depender do registo e autorização expressa da AGT.
+   */
+  public async requestSeriesAuthorization(
+    request: AGTSeriesAuthorizationRequest,
+    communicationKey: string
+  ): Promise<AGTSeriesAuthorizationResponse> {
+    if (!communicationKey || communicationKey.trim().length < 6) {
+      throw new Error(
+        'CHAVE_COMUNICACAO_INVALIDA: A chave de comunicação com a AGT é obrigatória para obter e validar séries no modo homologado.'
+      );
+    }
+
+    // Simulação de latência de rede com a AGT
+    if (this.simulatorConfig.networkLatencyMs > 0) {
+      await new Promise((res) => setTimeout(res, this.simulatorConfig.networkLatencyMs));
+    }
+
+    if (this.simulatorConfig.simulateTimeout) {
+      throw new Error('GATEWAY_TIMEOUT: Conexão ao serviço de séries da AGT expirou.');
+    }
+
+    const cleanSeries = request.seriesCode.trim().toUpperCase();
+    const cleanDocType = request.documentTypeCode.trim().toUpperCase();
+
+    // Código de validação oficial gerado pela AGT para a série autorizada
+    const agtValidationCode = `AGT-VAL-${request.fiscalYear}-${cleanDocType}-${cleanSeries}`;
+
+    return {
+      success: true,
+      agtValidationCode,
+      seriesCode: cleanSeries,
+      documentTypeCode: cleanDocType,
+      fiscalYear: request.fiscalYear,
+      authorizedAt: new Date().toISOString(),
+      status: 'APPROVED',
+      message: `Série ${cleanDocType} ${cleanSeries}/${request.fiscalYear} validada e autorizada com sucesso pela AGT.`,
+    };
+  }
+
+  /**
+   * Valida a chave de comunicação e obtém o certificado de homologação da AGT
+   */
+  public async validateCommunicationKey(
+    communicationKey: string
+  ): Promise<{ isValid: boolean; softwareCertificateNumber: string; message: string }> {
+    const cleanKey = communicationKey.trim();
+    if (!cleanKey || cleanKey.length < 6) {
+      return {
+        isValid: false,
+        softwareCertificateNumber: '0/AGT/2026',
+        message: 'Chave de comunicação inválida ou com formato insuficiente.',
+      };
+    }
+
+    // Simulação de validação da chave no Web Service da AGT
+    const certNum = 'CERT-AGT-2026/089';
+    return {
+      isValid: true,
+      softwareCertificateNumber: certNum,
+      message: `Chave de comunicação validada com sucesso pela AGT. Software homologado sob nº ${certNum}.`,
+    };
   }
 }

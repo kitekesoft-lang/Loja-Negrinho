@@ -8,6 +8,8 @@ import { LicenseInfo } from '../types/license';
 import { RestaurantTable } from '../types/restaurant';
 import { ServiceOrder } from '../types/serviceOrder';
 import { Employee, PayrollRecord } from '../types/payroll';
+import { DocumentSeries } from '../types/series';
+import { AGTHomologationConfig } from '../types/agt';
 
 export interface SyncQueueItem {
   id: string;
@@ -42,10 +44,38 @@ const STORAGE_KEYS = {
   SERVICE_ORDERS: 'minha_loja_service_orders_v1',
   EMPLOYEES: 'minha_loja_employees_v1',
   PAYROLL: 'minha_loja_payroll_v1',
+  SERIES: 'minha_loja_series_v1',
+  HOMOLOGATION_CONFIG: 'minha_loja_homologation_config_v1',
 };
 
 export class LocalPersistenceEngine {
   private static isSaving = false;
+
+  /**
+   * Obtém a configuração de homologação AGT
+   */
+  public static getHomologationConfig(): AGTHomologationConfig | null {
+    if (typeof window === 'undefined' || !window.localStorage) return null;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.HOMOLOGATION_CONFIG);
+      if (raw) return JSON.parse(raw);
+    } catch {
+      // Ignorar
+    }
+    return null;
+  }
+
+  /**
+   * Salva a configuração de homologação AGT
+   */
+  public static saveHomologationConfig(config: AGTHomologationConfig): void {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+      localStorage.setItem(STORAGE_KEYS.HOMOLOGATION_CONFIG, JSON.stringify(config));
+    } catch (err) {
+      console.error('Erro ao guardar homologationConfig no armazenamento local:', err);
+    }
+  }
 
   /**
    * Obtém a licença gravada no armazenamento local
@@ -191,6 +221,13 @@ export class LocalPersistenceEngine {
         const payArray: PayrollRecord[] = JSON.parse(rawPay);
         payArray.forEach((r) => db.payrollRecords.set(r.id, r));
       }
+
+      // 12. Séries Fiscais
+      const rawSeries = localStorage.getItem(STORAGE_KEYS.SERIES);
+      if (rawSeries) {
+        const seriesArray: DocumentSeries[] = JSON.parse(rawSeries);
+        seriesArray.forEach((s) => db.series.set(s.id, s));
+      }
     } catch (e) {
       console.warn('Aviso na hidratação de armazenamento local:', e);
     }
@@ -217,6 +254,7 @@ export class LocalPersistenceEngine {
       localStorage.setItem(STORAGE_KEYS.SERVICE_ORDERS, JSON.stringify(Array.from(db.serviceOrders.values())));
       localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(Array.from(db.employees.values())));
       localStorage.setItem(STORAGE_KEYS.PAYROLL, JSON.stringify(Array.from(db.payrollRecords.values())));
+      localStorage.setItem(STORAGE_KEYS.SERIES, JSON.stringify(Array.from(db.series.values())));
       localStorage.setItem(STORAGE_KEYS.BACKUP_TIMESTAMP, new Date().toISOString());
     } catch (err) {
       console.error('Erro ao persistir no armazenamento local:', err);

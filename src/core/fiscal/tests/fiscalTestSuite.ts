@@ -282,6 +282,8 @@ export class FiscalTestSuite {
       currentSequence: 0,
       isActive: true,
       isClosed: false,
+      seriesOrigin: 'LOCAL_AUTONOMOUS',
+      isAgtApproved: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -321,6 +323,8 @@ export class FiscalTestSuite {
       currentSequence: 50,
       isActive: true,
       isClosed: true,
+      seriesOrigin: 'LOCAL_AUTONOMOUS',
+      isAgtApproved: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

@@ -91,6 +91,8 @@ export const FISCAL_DOCUMENT_TYPES: Record<FiscalDocumentTypeCode, DocumentTypeD
   },
 };
 
+export type SeriesOrigin = 'LOCAL_AUTONOMOUS' | 'AGT_AUTHORIZED';
+
 export interface DocumentSeries {
   id: string;
   companyId: string;
@@ -101,6 +103,10 @@ export interface DocumentSeries {
   currentSequence: number; // starts at 0
   isActive: boolean;
   isClosed: boolean;
+  seriesOrigin: SeriesOrigin; // 'LOCAL_AUTONOMOUS' (pré-homologação) ou 'AGT_AUTHORIZED' (pós-homologação)
+  isAgtApproved: boolean; // Se a série foi autorizada pela AGT
+  agtValidationCode?: string; // Código de validação oficial atribuído pela AGT
+  agtRegisteredAt?: string; // Data e hora do registo/validação junto da AGT
   createdAt: string;
   updatedAt: string;
 }

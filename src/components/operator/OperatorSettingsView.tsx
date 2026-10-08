@@ -57,6 +57,8 @@ export const OperatorSettingsView: React.FC<OperatorSettingsViewProps> = ({ curr
   const [printerModel, setPrinterModel] = useState('Impressora Térmica 80mm (ESC/POS)');
   const [email, setEmail] = useState(company?.email || 'minhaloja@email.com');
   const [taxId, setTaxId] = useState(company?.taxId || '5417082341');
+  const [conservatory, setConservatory] = useState(company?.conservatoryRegistration || '1432-19/Luanda');
+  const [capitalSocial, setCapitalSocial] = useState(company?.capitalSocial || '5.000.000,00 Kz');
 
   const [feedbackSuccess, setFeedbackSuccess] = useState<string | null>(null);
   const [showAndroidGuideModal, setShowAndroidGuideModal] = useState(false);
@@ -71,7 +73,10 @@ export const OperatorSettingsView: React.FC<OperatorSettingsViewProps> = ({ curr
       company.email = email.trim();
       company.currency = currency.trim();
       company.taxId = taxId.trim();
+      company.conservatoryRegistration = conservatory.trim();
+      company.capitalSocial = capitalSocial.trim();
       db.companies.set(company.id, company);
+      db.notify();
     }
 
     setFeedbackSuccess('Alterações salvas com sucesso no banco de dados fiscal!');
@@ -298,6 +303,32 @@ export const OperatorSettingsView: React.FC<OperatorSettingsViewProps> = ({ curr
                   value={taxId}
                   onChange={(e) => setTaxId(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  Conservatória do Registo Comercial (Obrigatório AGT)
+                </label>
+                <input
+                  type="text"
+                  value={conservatory}
+                  onChange={(e) => setConservatory(e.target.value)}
+                  placeholder="Ex: 1432-19/Luanda"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  Capital Social da Empresa (Obrigatório AGT)
+                </label>
+                <input
+                  type="text"
+                  value={capitalSocial}
+                  onChange={(e) => setCapitalSocial(e.target.value)}
+                  placeholder="Ex: 5.000.000,00 Kz"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
               </div>
             </div>

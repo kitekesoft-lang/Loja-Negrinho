@@ -23,6 +23,7 @@ import {
 import { PGC_ANGOLANO_CHART } from '../engines/AccountingEngine';
 import { LocalPersistenceEngine } from '../storage/LocalPersistenceEngine';
 import { LicenseInfo } from '../types/license';
+import { AGTHomologationConfig } from '../types/agt';
 import { LicenseService } from '../security/LicenseService';
 import { RestaurantTable } from '../types/restaurant';
 import { ServiceOrder } from '../types/serviceOrder';
@@ -44,6 +45,7 @@ export class FiscalDatabase {
   public payments: Map<string, Payment> = new Map();
   public agtQueue: AGTTransmissionQueue;
   public license!: LicenseInfo;
+  public homologationConfig!: AGTHomologationConfig;
 
   // Colecções da Fase 4 (ERP Completo)
   public warehouses: Map<string, Warehouse> = new Map();
@@ -71,6 +73,61 @@ export class FiscalDatabase {
     this.seedInitialData();
     LocalPersistenceEngine.hydrateFromLocalStorage(this);
     this.license = LocalPersistenceEngine.getLicense() || LicenseService.createDefaultLicense();
+    this.homologationConfig = LocalPersistenceEngine.getHomologationConfig() || {
+      status: 'PENDING_CERTIFICATION',
+      communicationKey: '',
+      softwareCertificateNumber: '0/AGT/2026',
+      seriesGenerationMode: 'AUTONOMOUS',
+      authorizedByAGT: false,
+    };
+  }
+
+  public getHomologationConfig(): AGTHomologationConfig {
+    return this.homologationConfig;
+  }
+
+  public updateHomologationConfig(config: Partial<AGTHomologationConfig>): void {
+    this.homologationConfig = { ...this.homologationConfig, ...config };
+    LocalPersistenceEngine.saveHomologationConfig(this.homologationConfig);
+    this.notify();
+  }
+
+  public async activateAGTHomologation(
+    communicationKey: string,
+    certNumber?: string
+  ): Promise<{ success: boolean; message: string }> {
+    const result = await this.agtQueue.getConnector().validateCommunicationKey(communicationKey);
+    if (!result.isValid) {
+      throw new Error(result.message);
+    }
+    const cert = certNumber && certNumber.trim() ? certNumber.trim() : result.softwareCertificateNumber;
+    this.homologationConfig = {
+      status: 'HOMOLOGATED',
+      communicationKey: communicationKey.trim(),
+      softwareCertificateNumber: cert,
+      seriesGenerationMode: 'AGT_DEPENDENT',
+      homologatedAt: new Date().toISOString(),
+      authorizedByAGT: true,
+      lastSeriesSyncAt: new Date().toISOString(),
+    };
+    LocalPersistenceEngine.saveHomologationConfig(this.homologationConfig);
+    this.notify();
+    return {
+      success: true,
+      message: `Homologação AGT ativada com sucesso! O sistema opera agora em modo homologado sob o certificado nº ${cert}. Todas as novas séries dependem da autorização da AGT.`,
+    };
+  }
+
+  public deactivateAGTHomologation(): void {
+    this.homologationConfig = {
+      status: 'PENDING_CERTIFICATION',
+      communicationKey: '',
+      softwareCertificateNumber: '0/AGT/2026',
+      seriesGenerationMode: 'AUTONOMOUS',
+      authorizedByAGT: false,
+    };
+    LocalPersistenceEngine.saveHomologationConfig(this.homologationConfig);
+    this.notify();
   }
 
   public getLicense(): LicenseInfo {
@@ -1250,7 +1307,7 @@ export class FiscalDatabase {
     ];
     prods.forEach((p) => this.products.set(p.id, p));
 
-    // 8. Séries Documentais (Séries Oficiais 2026)
+    // 8. Séries Documentais (Séries Oficiais 2026 - Inicialmente Autónomas conforme AGT)
     const seriesList: DocumentSeries[] = [
       {
         id: 'SER-FT-2026',
@@ -1262,6 +1319,10 @@ export class FiscalDatabase {
         currentSequence: 0,
         isActive: true,
         isClosed: false,
+        seriesOrigin: 'LOCAL_AUTONOMOUS',
+        isAgtApproved: true,
+        agtValidationCode: 'LOCAL-AUTONOMOUS-A2026',
+        agtRegisteredAt: now,
         createdAt: now,
         updatedAt: now,
       },
@@ -1275,6 +1336,10 @@ export class FiscalDatabase {
         currentSequence: 0,
         isActive: true,
         isClosed: false,
+        seriesOrigin: 'LOCAL_AUTONOMOUS',
+        isAgtApproved: true,
+        agtValidationCode: 'LOCAL-AUTONOMOUS-A2026',
+        agtRegisteredAt: now,
         createdAt: now,
         updatedAt: now,
       },
@@ -1288,6 +1353,10 @@ export class FiscalDatabase {
         currentSequence: 0,
         isActive: true,
         isClosed: false,
+        seriesOrigin: 'LOCAL_AUTONOMOUS',
+        isAgtApproved: true,
+        agtValidationCode: 'LOCAL-AUTONOMOUS-A2026',
+        agtRegisteredAt: now,
         createdAt: now,
         updatedAt: now,
       },
@@ -1301,6 +1370,10 @@ export class FiscalDatabase {
         currentSequence: 0,
         isActive: true,
         isClosed: false,
+        seriesOrigin: 'LOCAL_AUTONOMOUS',
+        isAgtApproved: true,
+        agtValidationCode: 'LOCAL-AUTONOMOUS-A2026',
+        agtRegisteredAt: now,
         createdAt: now,
         updatedAt: now,
       },
@@ -1314,6 +1387,10 @@ export class FiscalDatabase {
         currentSequence: 0,
         isActive: true,
         isClosed: false,
+        seriesOrigin: 'LOCAL_AUTONOMOUS',
+        isAgtApproved: true,
+        agtValidationCode: 'LOCAL-AUTONOMOUS-A2026',
+        agtRegisteredAt: now,
         createdAt: now,
         updatedAt: now,
       },

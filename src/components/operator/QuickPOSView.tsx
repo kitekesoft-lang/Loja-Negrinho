@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FiscalDatabase } from '../../core/fiscal/repository/FiscalDatabase';
 import { InvoiceEngine } from '../../core/fiscal/engines/InvoiceEngine';
+import { TaxEngine } from '../../core/fiscal/engines/TaxEngine';
 import { PaymentEngine } from '../../core/fiscal/engines/PaymentEngine';
 import { Product } from '../../core/fiscal/types/product';
+import { TaxConfiguration } from '../../core/fiscal/types/tax';
 import { FiscalDocument } from '../../core/fiscal/types/document';
 import { User } from '../../core/fiscal/types/user';
 import { ProductVisual } from '../common/ProductVisual';
@@ -16,6 +18,7 @@ import {
   Plus,
   Minus,
   AlertCircle,
+  AlertTriangle,
   ShoppingBag,
   RotateCcw,
   Sparkles,
@@ -371,22 +374,67 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
     return matchQuery && matchCategory;
   });
 
-  // Cálculos do Carrinho
-  const subtotal = cart.reduce((acc, item) => acc + item.product.standardPrice * item.quantity, 0);
+  // Cálculos do Carrinho com Impostos Fiscais Reais (AGT)
+  const cartCalculations = cart.map((item) => {
+    const defaultTaxConfig: TaxConfiguration = Array.from(db.taxConfigurations.values())[0] || {
+      id: 'TAX-IVA-14',
+      code: 'IVA_14',
+      name: 'IVA Geral 14%',
+      taxType: 'IVA',
+      taxCode: 'NOR',
+      ratePercentage: 14,
+      legalBasis: 'Código do IVA - Lei 7/19',
+      isActive: true,
+    };
+    const taxConfig = db.taxConfigurations.get(item.product.taxConfigurationId) || defaultTaxConfig;
+    return TaxEngine.calculateLine({
+      quantity: item.quantity,
+      unitPrice: item.product.standardPrice,
+      taxConfig,
+      discountPercentage: 0,
+      applyWithholdingTax: item.product.type === 'SERVICE' && item.product.withholdingTaxApplicable,
+    });
+  });
+
+  const subtotalIlíquido = TaxEngine.roundCurrency(cartCalculations.reduce((acc, c) => acc + c.grossAmount, 0));
+  const totalTaxAmount = TaxEngine.roundCurrency(cartCalculations.reduce((acc, c) => acc + c.taxAmount, 0));
+  const totalWithholdingAmount = TaxEngine.roundCurrency(cartCalculations.reduce((acc, c) => acc + (c.withholdingAmount || 0), 0));
   const totalItemsCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const total = Math.max(0, subtotal - discountAmount);
+
+  // Total Real a Pagar da Factura/Recibo (Ilíquido + IVA - Desconto - Retenção)
+  const total = TaxEngine.roundCurrency(
+    Math.max(0, subtotalIlíquido + totalTaxAmount - discountAmount - totalWithholdingAmount)
+  );
+  const subtotal = subtotalIlíquido;
 
   // Cálculo de Troco (Dinheiro) - Sem atalhos para notas rápidas
   const isCashPayment = paymentMethod === 'DINHEIRO';
-  const numericReceived = parseFloat(amountReceivedInput.replace(/[^0-9.]/g, '')) || 0;
-  const changeAmount = isCashPayment && numericReceived >= total ? Math.max(0, numericReceived - total) : 0;
-  const missingAmount = isCashPayment && numericReceived > 0 && numericReceived < total ? Math.max(0, total - numericReceived) : 0;
+  // Normalizar separadores numéricos para parsing fiável (remover espaços normais, não-quebráveis \u00A0, estreitos \u202F, pontos de milhar)
+  const cleanReceivedStr = amountReceivedInput
+    .replace(/[\s\u00A0\u202F\u2000-\u200B]/g, '')
+    .replace(/\./g, '')
+    .replace(/,/g, '.');
+  const numericReceived = parseFloat(cleanReceivedStr) || 0;
+  const hasTypedReceived = amountReceivedInput.trim().length > 0;
+  const isInsufficient = isCashPayment && hasTypedReceived && numericReceived < total;
+  const changeAmount = isCashPayment && numericReceived >= total ? TaxEngine.roundCurrency(numericReceived - total) : 0;
+  const missingAmount = isCashPayment && hasTypedReceived && numericReceived < total ? TaxEngine.roundCurrency(total - numericReceived) : 0;
 
   // Finalizar Venda Fiscal (AGT / RSA-2048 / FR)
   const handleFinalizeSale = () => {
     if (cart.length === 0) {
       setScanAlert({ message: 'O carrinho está vazio. Adicione artigos antes de finalizar a venda.', type: 'error' });
       setTimeout(() => setScanAlert(null), 3500);
+      return;
+    }
+
+    // Validação Estrita: Se o pagamento for em Dinheiro e o valor entregue for inferior ao total, BLOQUEIA!
+    if (isCashPayment && hasTypedReceived && numericReceived < total) {
+      setScanAlert({
+        message: `Não é possível finalizar a venda: O valor entregue (${numericReceived.toLocaleString('pt-AO')} Kz) é inferior ao total a pagar (${total.toLocaleString('pt-AO')} Kz). Faltam ${missingAmount.toLocaleString('pt-AO')} Kz para liquidar a factura.`,
+        type: 'error',
+      });
+      setTimeout(() => setScanAlert(null), 5000);
       return;
     }
 
@@ -421,7 +469,14 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
         { products: db.products, taxConfigs: db.taxConfigurations }
       );
 
-      // Dados de pagamento e troco
+      // Validação final de integridade de montantes contra o total fiscal emitido
+      if (isCashPayment && hasTypedReceived && numericReceived < newDoc.netTotal) {
+        throw new Error(
+          `Violação de Pagamento: O valor entregue (${numericReceived.toLocaleString('pt-AO')} Kz) não cobre o total líquido da factura (${newDoc.netTotal.toLocaleString('pt-AO')} Kz).`
+        );
+      }
+
+      // Dados de pagamento e troco consistentes com newDoc.netTotal
       const methodLabel =
         paymentMethod === 'DINHEIRO'
           ? 'Dinheiro (Kz)'
@@ -431,8 +486,8 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
           ? 'Cartão'
           : 'Transferência';
 
-      const finalReceived = isCashPayment && numericReceived > 0 ? numericReceived : total;
-      const finalChange = isCashPayment && numericReceived >= total ? changeAmount : 0;
+      const finalReceived = isCashPayment && numericReceived >= newDoc.netTotal ? numericReceived : newDoc.netTotal;
+      const finalChange = isCashPayment && numericReceived > newDoc.netTotal ? TaxEngine.roundCurrency(numericReceived - newDoc.netTotal) : 0;
 
       newDoc.amountReceived = finalReceived;
       newDoc.changeAmount = finalChange;
@@ -780,34 +835,46 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
             </table>
           </div>
 
-          {/* Linhas de Subtotal, Desconto e Total */}
-          <div className="border-t border-slate-100 pt-3 space-y-2 text-xs">
+          {/* Linhas de Subtotal, Impostos e Total Oficial */}
+          <div className="border-t border-slate-100 pt-3 space-y-1.5 text-xs">
             <div className="flex justify-between items-center text-slate-600">
-              <span>Subtotal</span>
+              <span>Subtotal Ilíquido</span>
               <span className="font-bold text-slate-900 font-mono">
                 {subtotal.toLocaleString('pt-AO')} Kz
               </span>
             </div>
 
             <div className="flex justify-between items-center text-slate-600">
-              <span className="flex items-center gap-1.5">
-                <span>Desconto</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTempDiscount(discountAmount);
-                    setShowDiscountModal(true);
-                  }}
-                  className="text-slate-400 hover:text-blue-600 cursor-pointer p-0.5 rounded"
-                  title="Editar desconto"
-                >
-                  <Pencil className="w-3 h-3" />
-                </button>
+              <span className="flex items-center gap-1">
+                <span>Imposto (IVA)</span>
+                <span className="text-[9px] text-blue-700 font-bold bg-blue-50 px-1 py-0.2 rounded border border-blue-200">Oficial AGT</span>
               </span>
-              <span className="font-medium text-slate-900 font-mono">
-                {discountAmount > 0 ? `-${discountAmount.toLocaleString('pt-AO')} Kz` : '0 Kz'}
+              <span className="font-bold text-slate-900 font-mono">
+                {totalTaxAmount > 0 ? `+${totalTaxAmount.toLocaleString('pt-AO')} Kz` : '0 Kz (Isento)'}
               </span>
             </div>
+
+            {discountAmount > 0 && (
+              <div className="flex justify-between items-center text-slate-600">
+                <span className="flex items-center gap-1.5">
+                  <span>Desconto</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTempDiscount(discountAmount);
+                      setShowDiscountModal(true);
+                    }}
+                    className="text-slate-400 hover:text-blue-600 cursor-pointer p-0.5 rounded"
+                    title="Editar desconto"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                </span>
+                <span className="font-medium text-emerald-700 font-mono">
+                  -{discountAmount.toLocaleString('pt-AO')} Kz
+                </span>
+              </div>
+            )}
 
             {/* Total Destacado */}
             <div className="flex justify-between items-center pt-2.5 border-t border-slate-200">
@@ -946,7 +1013,7 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
               </div>
 
               {/* Resultado do Troco ou Falta */}
-              {numericReceived > 0 && (
+              {hasTypedReceived && (
                 <div className="pt-0.5">
                   {numericReceived >= total ? (
                     <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
@@ -956,11 +1023,19 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
                       </span>
                     </div>
                   ) : (
-                    <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
-                      <span className="text-xs font-bold text-amber-800">Falta a Pagar:</span>
-                      <span className="text-sm font-extrabold text-amber-900 font-mono">
-                        {missingAmount.toLocaleString('pt-AO')} Kz
-                      </span>
+                    <div className="p-2.5 bg-rose-50 border border-rose-300 rounded-xl space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-rose-800 flex items-center gap-1">
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                          Valor Insuficiente (Falta):
+                        </span>
+                        <span className="text-sm font-extrabold text-rose-900 font-mono">
+                          {missingAmount.toLocaleString('pt-AO')} Kz
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-rose-700 leading-tight">
+                        O montante entregue é inferior ao total da compra. A venda não pode ser finalizada sem quitação integral.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -968,15 +1043,24 @@ export const QuickPOSView: React.FC<QuickPOSViewProps> = ({ currentUser }) => {
             </div>
           )}
 
-          {/* Botão de Finalizar Venda com Assinatura AGT */}
+          {/* Botão de Finalizar Venda com Assinatura AGT e Bloqueio se Insuficiente */}
           <button
             type="button"
             onClick={handleFinalizeSale}
-            disabled={cart.length === 0 || isProcessing}
-            className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-extrabold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+            disabled={cart.length === 0 || isProcessing || isInsufficient}
+            className={`w-full py-3.5 px-4 text-white text-sm font-extrabold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 mt-2 ${
+              isInsufficient
+                ? 'bg-rose-600 hover:bg-rose-700 cursor-not-allowed opacity-90'
+                : 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
+            }`}
           >
             {isProcessing ? (
               <span>A Processar e Assinar Factura/Recibo...</span>
+            ) : isInsufficient ? (
+              <>
+                <AlertTriangle className="w-4 h-4" />
+                <span>Valor Insuficiente (Faltam {missingAmount.toLocaleString('pt-AO')} Kz)</span>
+              </>
             ) : (
               <>
                 <CheckCircle2 className="w-4 h-4" />
