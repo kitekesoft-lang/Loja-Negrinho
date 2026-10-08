@@ -22,10 +22,10 @@
       },
       {
         "target": "portable",
-        "arch": ["x64"]
+        "arch": ["x64", "ia32"]
       }
     ],
-    "icon": "electron/assets/icon.png",
+    "icon": "electron/assets/icon.ico",
     "legalTrademarks": "KitekeSoft",
     "requestedExecutionLevel": "asInvoker"
   },

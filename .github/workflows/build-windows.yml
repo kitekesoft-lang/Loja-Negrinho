@@ -11,6 +11,8 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - name: Clonar Repositório
         uses: actions/checkout@v4
@@ -19,16 +21,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
       - name: Instalar Dependências
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Compilar Frontend Vite
         run: npm run build
 
       - name: Gerar Executáveis Windows (.exe) com Electron Builder
-        run: npx electron-builder --win --x64
+        run: npx electron-builder --win --x64 --ia32 --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -39,4 +40,5 @@ jobs:
           path: |
             release/*.exe
             release/*.zip
+          if-no-files-found: warn
           retention-days: 14

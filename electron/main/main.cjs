@@ -5,6 +5,7 @@
  * ERP Existente (Vite/React + Fiscal Engine + AGT) -> Electron Shell -> Windows
  */
 const { app, ipcMain } = require('electron');
+const os = require('os');
 const config = require('../config/app.config.cjs');
 const { createMainWindow, getMainWindow } = require('./window.cjs');
 const { registerPrinterService } = require('../services/printer.cjs');
@@ -30,10 +31,22 @@ if (!gotTheLock) {
   });
 }
 
-// 2. Otimizações de Desempenho para Hardware Modesto
+// 2. Otimizações de Desempenho e Compatibilidade (Windows 7 SP1 / 8 / 8.1 / 10 / 11)
 app.commandLine.appendSwitch('disable-http-cache', 'false');
 // Desativa recursos desnecessários em background
 app.commandLine.appendSwitch('disable-background-timer-throttling', 'false');
+
+// Compatibilidade específica para sistemas Windows 7 (NT 6.1) e Windows 8/8.1 (NT 6.2/6.3)
+if (process.platform === 'win32') {
+  const release = os.release();
+  const isLegacyWindows = release.startsWith('6.1') || release.startsWith('6.2') || release.startsWith('6.3');
+  if (isLegacyWindows) {
+    console.log(`[Kiteke Pro] Compatibilidade ativa para Windows Legado (NT Kernel ${release})`);
+    // Previne erros de GPU sandbox com drivers de vídeo clássicos do Windows 7
+    app.commandLine.appendSwitch('disable-gpu-sandbox');
+    app.commandLine.appendSwitch('disable-software-rasterizer');
+  }
+}
 
 // 3. Registo dos Serviços IPC
 function setupIpcHandlers() {
