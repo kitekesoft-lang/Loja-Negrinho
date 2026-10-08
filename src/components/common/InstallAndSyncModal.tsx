@@ -144,14 +144,19 @@ export const InstallAndSyncModal: React.FC<InstallAndSyncModalProps> = ({
     }
   };
 
-  const handleDownloadWindowsZip = async () => {
+  const [downloadingArch, setDownloadingArch] = useState<'x64' | 'ia32' | null>(null);
+
+  const handleDownloadWindowsZip = async (arch: 'x64' | 'ia32' = 'x64') => {
     setIsDownloadingExe(true);
+    setDownloadingArch(arch);
     setDownloadProgress(0);
-    setDownloadProgressText('A iniciar transferência segura do pacote Windows (90.4 MB)...');
+    const archLabel = arch === 'ia32' ? '32-bit (Windows 7 SP1+)' : '64-bit (Windows 10/11/7)';
+    const filename = `Kiteke-Pro-Portable-${arch}.zip`;
+    setDownloadProgressText(`A iniciar transferência do pacote Windows ${archLabel}...`);
     setDownloadError(null);
 
     try {
-      const response = await fetch('/downloads/Kiteke-Pro-Portable-x64.zip', {
+      const response = await fetch(`/downloads/${filename}`, {
         credentials: 'include',
       });
 
@@ -160,11 +165,11 @@ export const InstallAndSyncModal: React.FC<InstallAndSyncModalProps> = ({
       }
 
       const contentLength = response.headers.get('content-length');
-      const totalBytes = contentLength ? parseInt(contentLength, 10) : 94809066;
+      const totalBytes = contentLength ? parseInt(contentLength, 10) : (arch === 'ia32' ? 183779479 : 189338921);
 
       if (!response.body) {
         const blob = await response.blob();
-        await validateAndSaveZipBlob(blob);
+        await validateAndSaveZipBlob(blob, filename);
         return;
       }
 
@@ -187,19 +192,20 @@ export const InstallAndSyncModal: React.FC<InstallAndSyncModalProps> = ({
       }
 
       const blob = new Blob(chunks as unknown as BlobPart[], { type: 'application/zip' });
-      await validateAndSaveZipBlob(blob);
+      await validateAndSaveZipBlob(blob, filename);
     } catch (err: unknown) {
       console.error('Erro no download:', err);
       const msg = err instanceof Error ? err.message : String(err);
       setDownloadError(
-        `O download foi interrompido antes do fim: ${msg}. Pode utilizar como alternativa recomendada a instalação em 1-clique (PWA) ou o Lançador .BAT.`
+        `O download pelo navegador encontrou um obstáculo: ${msg}. Pode utilizar os links diretos abaixo ou descarregar diretamente pelo Codespaces (botão direito no ficheiro > Download).`
       );
     } finally {
       setIsDownloadingExe(false);
+      setDownloadingArch(null);
     }
   };
 
-  const validateAndSaveZipBlob = async (blob: Blob) => {
+  const validateAndSaveZipBlob = async (blob: Blob, filename = 'Kiteke-Pro-Portable-x64.zip') => {
     if (blob.size < 5000000) {
       const textSample = await blob.slice(0, 500).text();
       if (textSample.includes('<html') || textSample.includes('302 Found') || textSample.includes('cookie_check')) {
@@ -212,13 +218,13 @@ export const InstallAndSyncModal: React.FC<InstallAndSyncModalProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'Kiteke-Pro-Portable-x64.zip';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 10000);
     setShowHowToOpenExe(true);
-    setSyncFeedback('Download concluído com sucesso (90.4 MB)! Extraia o ficheiro ZIP antes de executar.');
+    setSyncFeedback(`Download concluído com sucesso (${filename})! Extraia o ficheiro ZIP antes de executar.`);
   };
 
   return (
@@ -332,27 +338,47 @@ export const InstallAndSyncModal: React.FC<InstallAndSyncModalProps> = ({
                 </div>
 
                 <div className="space-y-2.5 pt-2 border-t border-slate-200">
-                  {/* Botão de Download Interativo com Barra de Progresso */}
-                  <div className="space-y-1.5">
-                    <button
-                      type="button"
-                      onClick={handleDownloadWindowsZip}
-                      disabled={isDownloadingExe}
-                      className="w-full py-2.5 px-3 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:cursor-wait shadow-xs text-xs"
-                      title="Descarregar pacote portátil com Kiteke Pro.exe nativo para Windows 7, 8, 8.1, 10 e 11"
-                    >
-                      {isDownloadingExe ? (
-                        <>
-                          <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
-                          <span>A transferir pacote completo (90.4 MB)...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Download className="w-4 h-4 text-amber-400" />
-                          <span>Descarregar Pacote Windows (Kiteke Pro.exe)</span>
-                        </>
-                      )}
-                    </button>
+                  {/* Botões de Download Interativo para Windows 64-bit e 32-bit */}
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {/* Botão 64-bit */}
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadWindowsZip('x64')}
+                        disabled={isDownloadingExe}
+                        className="py-2.5 px-3 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-700 text-white font-bold rounded-xl flex flex-col items-center justify-center gap-0.5 transition-colors cursor-pointer disabled:cursor-wait shadow-xs text-xs"
+                        title="Para computadores modernos de 64 bits (Windows 10, 11 e Windows 7/8 x64)"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          {isDownloadingExe && downloadingArch === 'x64' ? (
+                            <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+                          ) : (
+                            <Download className="w-3.5 h-3.5 text-amber-400" />
+                          )}
+                          <span>Windows 64-bit (.exe)</span>
+                        </div>
+                        <span className="text-[10px] text-slate-300 font-normal">Win 10, 11 &amp; Win 7/8 x64</span>
+                      </button>
+
+                      {/* Botão 32-bit (Compatibilidade Máxima para Windows 7 SP1) */}
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadWindowsZip('ia32')}
+                        disabled={isDownloadingExe}
+                        className="py-2.5 px-3 bg-blue-700 hover:bg-blue-800 disabled:bg-blue-900 text-white font-bold rounded-xl flex flex-col items-center justify-center gap-0.5 transition-colors cursor-pointer disabled:cursor-wait shadow-xs text-xs"
+                        title="Compatibilidade total para computadores antigos: Windows 7 SP1, 8, 8.1, 10 e 11 (32 e 64-bit)"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          {isDownloadingExe && downloadingArch === 'ia32' ? (
+                            <Loader2 className="w-3.5 h-3.5 text-amber-300 animate-spin" />
+                          ) : (
+                            <Download className="w-3.5 h-3.5 text-amber-300" />
+                          )}
+                          <span>Windows 32-bit (.exe)</span>
+                        </div>
+                        <span className="text-[10px] text-blue-200 font-normal">Windows 7 SP1+ Legado</span>
+                      </button>
+                    </div>
 
                     {/* Barra de Progresso em Tempo Real */}
                     {isDownloadingExe && (
@@ -368,10 +394,32 @@ export const InstallAndSyncModal: React.FC<InstallAndSyncModalProps> = ({
                           />
                         </div>
                         <p className="text-[10px] text-slate-500">
-                          Aguarde o download integral de 90.4 MB para que o arquivo não fique corrompido.
+                          Aguarde o download integral para que o pacote não fique corrompido.
                         </p>
                       </div>
                     )}
+
+                    {/* Links Diretos Alternativos */}
+                    <div className="flex items-center justify-between text-[10px] text-slate-500 px-1 pt-0.5">
+                      <span>Links diretos sem navegador:</span>
+                      <div className="flex gap-2">
+                        <a
+                          href="/downloads/Kiteke-Pro-Portable-x64.zip"
+                          download="Kiteke-Pro-Portable-x64.zip"
+                          className="text-blue-600 hover:underline font-semibold"
+                        >
+                          Direto x64 (.zip)
+                        </a>
+                        <span>•</span>
+                        <a
+                          href="/downloads/Kiteke-Pro-Portable-ia32.zip"
+                          download="Kiteke-Pro-Portable-ia32.zip"
+                          className="text-blue-600 hover:underline font-semibold"
+                        >
+                          Direto 32-bit (.zip)
+                        </a>
+                      </div>
+                    </div>
 
                     {/* Mensagem de Erro com Explicação Clara */}
                     {downloadError && (
@@ -381,8 +429,7 @@ export const InstallAndSyncModal: React.FC<InstallAndSyncModalProps> = ({
                           <span>Bloqueio de Download no Navegador Cloud</span>
                         </div>
                         <p className="text-[10.5px] leading-relaxed text-rose-700">
-                          O download de 90 MB pelo navegador foi bloqueado pelo proxy da Cloud. 
-                          <strong>Se abriu uma janela branca, feche-a no 'X' no canto superior direito</strong> — a sua aplicação principal do Kiteke Pro continua aberta normalmente.
+                          {downloadError}
                         </p>
                         <div className="flex gap-2 pt-1">
                           <a
@@ -391,21 +438,16 @@ export const InstallAndSyncModal: React.FC<InstallAndSyncModalProps> = ({
                             className="flex-1 py-1.5 px-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-[10.5px] text-center flex items-center justify-center gap-1 transition-colors"
                           >
                             <Download className="w-3 h-3 text-amber-300" />
-                            <span>Download Direto (.zip)</span>
+                            <span>Download Direto x64</span>
                           </a>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const fullUrl = `${window.location.origin}/downloads/Kiteke-Pro-Portable-x64.zip`;
-                              navigator.clipboard.writeText(fullUrl);
-                              setSyncFeedback('Link direto copiado para a área de transferência!');
-                              setTimeout(() => setSyncFeedback(null), 4000);
-                            }}
-                            className="py-1.5 px-2.5 bg-white border border-rose-200 text-rose-800 hover:bg-rose-100 font-semibold rounded-lg text-[10.5px] transition-colors cursor-pointer flex items-center gap-1"
+                          <a
+                            href="/downloads/Kiteke-Pro-Portable-ia32.zip"
+                            download="Kiteke-Pro-Portable-ia32.zip"
+                            className="flex-1 py-1.5 px-2 bg-rose-700 hover:bg-rose-800 text-white font-bold rounded-lg text-[10.5px] text-center flex items-center justify-center gap-1 transition-colors"
                           >
-                            <Copy className="w-3 h-3 text-rose-600" />
-                            <span>Copiar Link</span>
-                          </button>
+                            <Download className="w-3 h-3 text-amber-300" />
+                            <span>Download Direto 32-bit</span>
+                          </a>
                         </div>
                       </div>
                     )}
@@ -415,19 +457,33 @@ export const InstallAndSyncModal: React.FC<InstallAndSyncModalProps> = ({
                   <div className="p-2.5 bg-amber-50/80 border border-amber-200/90 rounded-xl text-[11px] text-amber-950 space-y-1">
                     <div className="font-extrabold flex items-center gap-1.5 text-amber-900">
                       <FolderArchive className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                      <span>Como abrir o sistema no Windows:</span>
+                      <span>Como abrir o sistema no Windows (7, 8, 10, 11):</span>
                     </div>
                     <ol className="list-decimal list-inside space-y-0.5 text-[10.5px] text-amber-900/90 leading-relaxed pl-1">
-                      <li>O ficheiro descarregado é um arquivo compactado <strong>.ZIP de 90.4 MB</strong>.</li>
-                      <li>Clique com o <strong>botão direito</strong> do rato no arquivo e selecione <strong>"Extrair Tudo..."</strong> (ou extraia com o WinRAR).</li>
-                      <li>Entre na pasta extraída e execute o ficheiro <strong>"Kiteke Pro.exe"</strong>.</li>
+                      <li>O ficheiro descarregado é um arquivo compactado <strong>.ZIP</strong> contendo a aplicação.</li>
+                      <li>Clique com o <strong>botão direito</strong> no arquivo ZIP e selecione <strong>"Extrair Tudo..."</strong> (ou utilize WinRAR/7-Zip).</li>
+                      <li>Entre na pasta extraída e dê duplo clique no ficheiro <strong>"Kiteke Pro.exe"</strong>.</li>
                     </ol>
-                    <div className="pt-1 text-[10px] text-amber-800/90 border-t border-amber-200/60 flex items-start gap-1">
-                      <HelpCircle className="w-3 h-3 text-amber-600 shrink-0 mt-0.5" />
-                      <span>
-                        <strong>Aviso WinRAR "formato desconhecido ou danificado":</strong> Ocorre se o ficheiro tiver apenas alguns KB (download incompleto/interrompido). Verifique se o ficheiro atinge os <strong>90 MB</strong> completos.
-                      </span>
+                  </div>
+
+                  {/* Caixa Destaque: Como Descarregar no GitHub Codespaces */}
+                  <div className="p-2.5 bg-slate-100 border border-slate-300/80 rounded-xl text-[11px] text-slate-800 space-y-1.5">
+                    <div className="font-extrabold flex items-center gap-1.5 text-slate-900">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Se estiver no GitHub Codespaces:</span>
                     </div>
+                    <p className="text-[10.5px] text-slate-700 leading-relaxed">
+                      Não precisa de compilar nada novamente! Os ficheiros já estão gerados no seu explorador à esquerda:
+                    </p>
+                    <div className="bg-white p-2 rounded-lg border border-slate-200 font-mono text-[10px] text-slate-800 space-y-1">
+                      <div>📁 <strong>release/win-unpacked/Kiteke Pro.exe</strong> (64-bit)</div>
+                      <div>📁 <strong>release/win-ia32-unpacked/Kiteke Pro.exe</strong> (32-bit Windows 7+)</div>
+                      <div>📦 <strong>release/Kiteke-Pro-Portable-x64.zip</strong></div>
+                      <div>📦 <strong>release/Kiteke-Pro-Portable-ia32.zip</strong></div>
+                    </div>
+                    <p className="text-[10px] text-slate-600">
+                      👉 <strong>Basta clicar com o botão direito no ficheiro</strong> no menu esquerdo do Codespaces e clicar em <strong>"Download..." (Descarregar)</strong> para salvar diretamente no seu computador!
+                    </p>
                   </div>
 
                   {/* Opção Recomendada: PWA Instantâneo */}

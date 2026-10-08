@@ -1,0 +1,20 @@
+=======================================================
+KITEKE PRO — SISTEMA DE GESTÃO EMPRESARIAL & FACTURAÇÃO
+Versão: 1.0.0 Desktop Windows (32-bit (ia32 / x86))
+Motor: Electron 22.3.27 (Chromium 108)
+=======================================================
+
+COMPATIBILIDADE GARANTIDA:
+• Windows 7 SP1 (32-bit e 64-bit com KB2533623)
+• Windows 8 e Windows 8.1
+• Windows 10 e Windows 11
+• Windows Server 2008 R2 / 2012 / 2016 / 2019 / 2022
+
+INSTRUÇÕES DE EXECUÇÃO:
+1. Extraia o conteúdo deste arquivo para uma pasta local (Exemplo: C:\KitekePro).
+2. Dê duplo clique no executável "Kiteke Pro.exe" para iniciar o sistema.
+3. Se desejar, crie um atalho de "Kiteke Pro.exe" no seu Ambiente de Trabalho.
+
+Contactos & Suporte:
+KitekeSoft — Suporte Técnico
+Email: kitekesoft@gmail.com
